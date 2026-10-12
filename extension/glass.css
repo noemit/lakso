@@ -172,6 +172,35 @@ html[data-xlg] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > 
   box-shadow: inset 0 0 0 1px rgba(var(--xlg-ui-accent-rgb), .25);
 }
 
+/* Every Lakso surface is light stock, but X keeps painting its own theme ink
+   on the chrome around the cards (pale in dark mode). Anything sitting on a
+   themed surface therefore takes the paper ink, in one place, so a new
+   surface cannot be added without inheriting it. */
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-search-field], [data-xlg-panel]) {
+  color: rgb(var(--xlg-ui-accent-rgb)) !important;
+}
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-panel]) :is(a, button, span, div, label, input, textarea, [role="tab"], [role="link"], h1, h2) {
+  color: inherit !important;
+}
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-panel]) svg {
+  fill: currentColor !important;
+  color: inherit !important;
+}
+/* Placeholders are the one thing that must not inherit full-strength ink. */
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-composer], [data-xlg-search]) :is(input, textarea)::placeholder,
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-composer], [data-xlg-search]) [data-text="true"][aria-hidden="true"] {
+  color: rgba(var(--xlg-ui-accent-rgb), .55) !important;
+}
+/* The unselected timeline tabs are secondary. */
+html[data-xlg][data-xlg-style="paper"] [data-xlg-toolbar] [role="tab"]:not([aria-selected="true"]) {
+  color: rgba(var(--xlg-ui-accent-rgb), .62) !important;
+  font-weight: 500 !important;
+}
+/* The rail collapses to icons: the accent bar marks the active item. */
+html[data-xlg][data-xlg-style="paper"] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > div :is(span, div) {
+  font-weight: 600 !important;
+}
+
 /* Compact dock: the icon-only rail, detected by its measured width (also on
    Chat at wide viewports). Its native width is preserved; every control gets
    a full, centered 48px hit area. */
@@ -611,6 +640,35 @@ html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before {
 
 /* Editorial type: the reference sets large, tightly tracked headings against
    small captions with generous leading, so post bodies get room to breathe. */
+/* X keeps painting its own theme ink (pale in dark mode) on these, which is
+   unreadable on cream stock. Lakso owns the post text colors inside cards
+   instead of relying on X's theme, and derives them from the paper ink. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="tweetText"], [data-testid="User-Name"], [data-testid="tweetText"] span, [data-testid="User-Name"] span, [data-testid="card.layoutLarge.media"], [data-testid="card.wrapper"]) {
+  color: rgb(var(--xlg-ui-accent-rgb)) !important;
+}
+/* Timestamps, handles and action counts are secondary: lighter, but still
+   mixed from the same ink so they never fall back to X's pale theme gray. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="User-Name"] > div:last-child, [role="group"] [data-testid="app-text-transition-container"], [role="group"] span, time, a[href$="/analytics"]) {
+  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
+}
+/* Inline links, mentions and hashtags keep a readable accent instead of X's
+   blue, which clashes with the warm palette. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] :is(a, [role="link"]) {
+  color: rgb(var(--xlg-accent-rgb)) !important;
+  text-decoration-color: rgba(var(--xlg-ui-accent-rgb), .35);
+}
+/* Icons and the action row follow the ink too, so they are not left pale. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] svg {
+  fill: rgba(var(--xlg-ui-accent-rgb), .72) !important;
+  color: rgba(var(--xlg-ui-accent-rgb), .72) !important;
+}
+/* The reply-context line above a reply. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="replyContext"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="socialContext"] {
+  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
+}
+
 html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
   font-size: 16px !important;
   line-height: 1.62 !important;

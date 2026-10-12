@@ -97,13 +97,15 @@ globalThis.XGlow = (() => {
      stock and the canvas behind it is X's own dark tone, so tint only ever
      lightens or darkens the paper, never colors it. */
   const paper = Object.freeze({
-    ink: [37, 37, 37],
-    canvas: '#242424',
-    canvasLight: '#e3e3e3',
-    stock: [252, 252, 251],
-    stockLight: [255, 255, 255],
-    rule: [232, 232, 230],
-    ruleLight: [214, 214, 211]
+    // Warm, earthy paper: cream stock on a deep brown ground, sampled from the
+    // reference. Deliberately not neutral: every value has red above blue.
+    ink: [42, 32, 27],
+    canvas: '#2c2421',
+    canvasLight: '#d9cdb8',
+    stock: [249, 244, 225],
+    stockLight: [247, 245, 224],
+    rule: [222, 207, 176],
+    ruleLight: [205, 189, 158]
   });
 
   /* Ink stays legible on paper at every tint: past ~35% the tint has darkened
@@ -112,9 +114,9 @@ globalThis.XGlow = (() => {
 
   /* X draws the primary button's label in a fixed dark blue (#111b33), so the
      button itself must stay dark whatever the tint does to the stock. Paper's
-     button is therefore a print-black pill, not the tinted ink used for text:
+     button is therefore a deep brown pill, not the tinted ink used for text:
      at tint 0 a tinted pill would leave that label at 1.1:1. */
-  const control = Object.freeze({ end: [17, 20, 26], start: [38, 42, 50] });
+  const control = Object.freeze({ end: [42, 32, 27], start: [74, 58, 49] });
 
   function paperPalette(settings, light) {
     const tint = settings.tint / 100;

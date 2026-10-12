@@ -48,9 +48,9 @@ test('unknown or legacy styles fall back to paper and keep their accents', () =>
   assert.equal(XGlow.normalize({ style: 'glass', accent: 'ocean' }).accent, 'ocean');
 });
 
-test('the paper style is monochrome in both tones whatever the accent is', () => {
+test('the paper style keeps one palette in both tones whatever the accent is', () => {
   const paper = accent => XGlow.palette({ style: 'paper', accent, tint: 50 });
-  // Every accent produces identical paper: the style ignores the hue.
+  // Every accent produces identical paper: the style ignores the accent hue.
   const first = paper('ocean');
   for (const accent of [...Object.keys(XGlow.accents), 'custom']) {
     assert.deepEqual(paper(accent), first, `paper must not vary with ${accent}`);
@@ -58,11 +58,13 @@ test('the paper style is monochrome in both tones whatever the accent is', () =>
   const channels = value => value.split(',').map(Number);
   // "Neutral" means no hue, not exactly equal channels: the paper palette uses
   // a print black with a faint cool cast, the way ink on stock does.
-  const isNeutral = value => { const rgb = channels(value); return Math.max(...rgb) - Math.min(...rgb) <= 13; };
+  // The paper palette is warm by design, so the invariant is not "gray" but
+  // "never hue-shifted by the accent, and always red >= blue".
+  const isWarm = value => { const [r, , b] = channels(value); return r >= b; };
   for (const tone of ['dark', 'light']) {
     const palette = XGlow.palette({ style: 'paper', tint: 50 }, tone);
     for (const key of ['accent', 'base', 'interfaceAccent', 'controlStart', 'controlEnd', 'glowSecondary']) {
-      assert.ok(isNeutral(palette[key]), `${key} must be neutral in ${tone}: ${palette[key]}`);
+      assert.ok(isWarm(palette[key]), `${key} must stay warm in ${tone}: ${palette[key]}`);
     }
     // No glow: the paper canvas is flat.
     assert.equal(palette.glowOpacity, '0');
@@ -77,7 +79,7 @@ test('the paper style is monochrome in both tones whatever the accent is', () =>
     const tinted = XGlow.palette({ style: 'paper', tint: 100 }, tone).background;
     assert.notEqual(tinted, flat);
     const rgb = tinted.slice(1).match(/../g).map(h => parseInt(h, 16));
-    assert.ok(Math.max(...rgb) - Math.min(...rgb) <= 4, `canvas must stay neutral: ${tinted}`);
+    assert.ok(rgb[0] >= rgb[2], `canvas must stay warm: ${tinted}`);
   }
 });
 
@@ -85,7 +87,9 @@ test('paper ink stays readable against paper stock at every tint', () => {
   const channels = value => value.split(',').map(Number);
   // "Neutral" means no hue, not exactly equal channels: the paper palette uses
   // a print black with a faint cool cast, the way ink on stock does.
-  const isNeutral = value => { const rgb = channels(value); return Math.max(...rgb) - Math.min(...rgb) <= 13; };
+  // The paper palette is warm by design, so the invariant is not "gray" but
+  // "never hue-shifted by the accent, and always red >= blue".
+  const isWarm = value => { const [r, , b] = channels(value); return r >= b; };
   const luminance = rgb => channels(rgb).map(channel => {
     const value = channel / 255;
     return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
@@ -104,7 +108,7 @@ test('paper ink stays readable against paper stock at every tint', () => {
       // glass.css).
       const buttonLabel = contrast(palette.controlEnd, '252,252,251');
       assert.ok(buttonLabel >= 4.5, `label on button at tint ${tint} (${tone}): ${buttonLabel.toFixed(2)}`);
-      assert.ok(isNeutral(palette.controlStart) && isNeutral(palette.controlEnd));
+      assert.ok(isWarm(palette.controlStart) && isWarm(palette.controlEnd));
     }
   }
 });
