@@ -401,6 +401,41 @@
     clearControls(composer);
   }
 
+  /* --------------------------------------------------------- Zebra stripes */
+
+  /* Alternates post backgrounds. X's timeline is virtualized: offscreen cells
+     are removed and re-mounted on scroll, so nth-child would re-stripe a post
+     differently every time it came back into view.
+
+     The stripe therefore has to be a property of the post's ORDINAL position.
+     A cell's translateY offset looks tempting but is wrong: post heights vary
+     (a quoted post is ~985px against ~269px for a plain one), so offset parity
+     produces clumps -- base, alt, base, base, base -- rather than alternation.
+     Instead the offset is ranked against the offsets currently mounted: X
+     keeps them ordered, and a rank of 0, 2, 4 stays even however many cells
+     are mounted. Known limitation: rank parity is exact while the viewport
+     covers an even number of posts and can shift by one across a scroll that
+     changes the count, so this is a rhythm rather than a guarantee. */
+  const OFFSET_PX = /translateY\((-?[\d.]+)px\)/;
+
+  function markZebra(primary) {
+    const cells = [...primary.querySelectorAll('[data-testid="cellInnerDiv"]')]
+      .filter(cell => cell.querySelector('article[data-testid="tweet"]'));
+    if (!settings.enabled || !settings.zebra || isThread()) {
+      for (const cell of cells) cell.removeAttribute('data-xlg-zebra');
+      return;
+    }
+    const ranked = cells
+      .map(cell => {
+        const match = OFFSET_PX.exec(cell.style.transform || '');
+        const offset = match ? Number(match[1]) : NaN;
+        return { cell, offset: Number.isFinite(offset) ? offset : null };
+      })
+      .filter(entry => entry.offset !== null)
+      .sort((a, b) => a.offset - b.offset);
+    ranked.forEach((entry, rank) => entry.cell.toggleAttribute('data-xlg-zebra', rank % 2 === 1));
+  }
+
   // Aggregated notifications (likes, follows) use their own article test id.
   function markCellShells(primary) {
     for (const article of primary.querySelectorAll('article:is([data-testid="tweet"], [data-testid="notification"])')) {
@@ -442,6 +477,7 @@
     markToolbars(primary);
     markComposer(primary);
     markCellShells(primary);
+    markZebra(primary);
     markNewPostsRows(primary);
     markSearchFeedback(primary);
     syncConversations(primary);
@@ -468,6 +504,7 @@
     '--xlg-control-start-rgb': 'controlStart',
     '--xlg-control-end-rgb': 'controlEnd',
     '--xlg-base': 'base',
+    '--xlg-alt-stock': 'altStock',
     '--xlg-bg': 'background',
     '--xlg-border': 'border',
     '--xlg-glow-secondary-rgb': 'glowSecondary',
@@ -484,6 +521,7 @@
     root.toggleAttribute('data-xlg-cards', settings.cards);
     root.toggleAttribute('data-xlg-lite', settings.lite);
     root.toggleAttribute('data-xlg-hide-sidebar', !settings.sidebar);
+    root.toggleAttribute('data-xlg-zebra', settings.zebra);
     const palette = XGlow.palette(settings, nativeTone);
     for (const [property, key] of PALETTE_PROPERTIES) root.style.setProperty(property, palette[key]);
     root.style.setProperty('--xlg-blur', `${settings.blur}px`);

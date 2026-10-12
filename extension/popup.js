@@ -4,7 +4,7 @@
   'use strict';
 
   const $ = id => document.getElementById(id);
-  const FIELDS = ['enabled', 'tint', 'blur', 'opacity', 'cards', 'lite', 'sidebar', 'feedWidth'];
+  const FIELDS = ['enabled', 'tint', 'blur', 'opacity', 'cards', 'lite', 'sidebar', 'feedWidth', 'zebra'];
   const UNITS = { tint: '%', blur: ' px', opacity: '%' };
   const MESSAGES = {
     saving: 'Saving…',
@@ -42,6 +42,8 @@
     // Width has no meaning while the sidebar is shown, so the slider follows
     // the sidebar toggle rather than sitting there doing nothing.
     $('feedWidth').disabled = settings.sidebar;
+    // Stripes need opaque stock to alternate between, so paper only.
+    $('zebra').disabled = settings.style !== 'paper';
     $('customControls').hidden = settings.accent !== 'custom';
     // The paper style is monochrome: the accent controls would do nothing,
     // so they are hidden rather than left there lying to the user.

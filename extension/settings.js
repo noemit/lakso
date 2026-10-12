@@ -18,7 +18,10 @@ globalThis.XGlow = (() => {
     // Width of the feed column once the right sidebar is hidden. Exposed as a
     // slider because the width is otherwise impossible to discover: it used to
     // ride on the sidebar toggle, which reads only as "hide Trends".
-    feedWidth: 1180
+    feedWidth: 1180,
+    // Alternating post backgrounds. Only meaningful in the paper style, which
+    // has opaque stock to alternate between.
+    zebra: false
   });
 
   const styles = Object.freeze(['paper', 'glass']);
@@ -65,7 +68,8 @@ globalThis.XGlow = (() => {
       cards: boolean(value.cards, defaults.cards),
       lite: boolean(value.lite, defaults.lite),
       sidebar: boolean(value.sidebar, defaults.sidebar),
-      feedWidth: clamp(value.feedWidth, 600, 1600, defaults.feedWidth)
+      feedWidth: clamp(value.feedWidth, 600, 1600, defaults.feedWidth),
+      zebra: boolean(value.zebra, defaults.zebra)
     };
   }
 
@@ -130,6 +134,11 @@ globalThis.XGlow = (() => {
        never moves the stock; it moves how far the canvas behind the cards
        separates from it, and slightly deepens the rules and the ink. */
     const base = light ? paper.stockLight : paper.stock;
+    /* The alternating stripe is a fixed small step off the stock rather than
+       an absolute colour, so it stays a matched pair at every tint. 4% keeps
+       the two shades reading as one palette; a larger step starts looking
+       like two different card styles instead of a rhythm. */
+    const alt = mix(base, BLACK, .04);
     /* Tint moves the canvas behind the cards, never the stock: white paper
        stays white while the surrounding page deepens. That keeps ink-on-stock
        contrast intact and gives the cards their edge. */
@@ -151,6 +160,7 @@ globalThis.XGlow = (() => {
       controlEnd: fade(control.end),
       controlStart: fade(control.start),
       base: fade(base),
+      altStock: fade(alt),
       background: toHex(canvas),
       glowSecondary: fade(base),
       glowTertiary: fade(base),

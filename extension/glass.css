@@ -670,6 +670,19 @@ html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [d
   border-color: rgba(var(--xlg-ui-accent-rgb), .34) !important;
 }
 
+/* Alternating post backgrounds. The two shades are a matched pair derived
+   from the stock (see settings.js), so this reads as a rhythm rather than as
+   two different card styles. Only the surface changes: borders, padding and
+   the ruled footer stay identical, which is what keeps the spacing even. */
+html[data-xlg][data-xlg-style="paper"][data-xlg-zebra][data-xlg-cards]:not([data-xlg-thread]) [data-testid="cellInnerDiv"][data-xlg-zebra] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: rgb(var(--xlg-alt-stock)) !important;
+}
+/* The footer rule tracks the stripe so the hairline keeps its contrast on
+   both shades. */
+html[data-xlg][data-xlg-style="paper"][data-xlg-zebra] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] {
+  border-top-color: var(--xlg-border) !important;
+}
+
 /* The toolbar spans the feed column, not the viewport, so its tabs line up
    with the cards below instead of overhanging them. */
 html[data-xlg][data-xlg-style="paper"] [data-xlg-toolbar] {
