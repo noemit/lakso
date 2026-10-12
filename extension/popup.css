@@ -182,3 +182,15 @@ button:disabled, input:disabled { opacity: .5; cursor: wait; }
 @media (prefers-reduced-motion: reduce) {
   .switch::before { transition: none; }
 }
+
+/* Style picker reuses the swatch grid at two columns, with a paper / glass
+   preview instead of an accent color. */
+.swatches.styles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.swatches.styles button[data-style="paper"] i {
+  background: linear-gradient(135deg, #fcfcfb 48%, #2c2c2c 48%);
+  border-radius: 1px;
+}
+.swatches.styles button[data-style="glass"] i {
+  background: linear-gradient(135deg, #f4b95259, #ffffff1a 60%, #0000);
+  backdrop-filter: blur(3px);
+}

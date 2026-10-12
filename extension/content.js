@@ -480,6 +480,7 @@
   function apply() {
     root.toggleAttribute('data-xlg', settings.enabled);
     root.setAttribute('data-xlg-tone', nativeTone);
+    root.setAttribute('data-xlg-style', settings.style);
     root.toggleAttribute('data-xlg-cards', settings.cards);
     root.toggleAttribute('data-xlg-lite', settings.lite);
     root.toggleAttribute('data-xlg-hide-sidebar', !settings.sidebar);

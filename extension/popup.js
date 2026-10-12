@@ -17,6 +17,8 @@
   const status = $('status');
   const hexInput = $('customHex');
   const swatches = [...document.querySelectorAll('[data-accent]')];
+  const styleButtons = [...document.querySelectorAll('[data-style]')];
+  const accentFieldset = $('accentFieldset');
   const controls = [...document.querySelectorAll('input, button')];
   let settings = XGlow.normalize();
   let queue = Promise.resolve();
@@ -37,6 +39,12 @@
     FIELDS.forEach(renderField);
     for (const [id, unit] of Object.entries(UNITS)) $(`${id}Value`).value = `${settings[id]}${unit}`;
     $('customControls').hidden = settings.accent !== 'custom';
+    // The paper style is monochrome: the accent controls would do nothing,
+    // so they are hidden rather than left there lying to the user.
+    accentFieldset.hidden = settings.style === 'paper';
+    for (const button of styleButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.style === settings.style));
+    }
     $('customColor').value = settings.customColor;
     hexInput.value = settings.customColor;
     hexInput.removeAttribute('aria-invalid');
@@ -78,6 +86,7 @@
     });
   }
   for (const button of swatches) button.addEventListener('click', () => save({ accent: button.dataset.accent }));
+  for (const button of styleButtons) button.addEventListener('click', () => save({ style: button.dataset.style }));
   $('customColor').addEventListener('input', event => save({ accent: 'custom', customColor: event.target.value }));
   hexInput.addEventListener('change', saveHex);
   hexInput.addEventListener('keydown', event => {

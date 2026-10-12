@@ -82,15 +82,18 @@ html[data-xlg][data-xlg-hide-sidebar] [data-xlg-layout] > header[role="banner"] 
 html[data-xlg][data-xlg-hide-sidebar] [data-xlg-layout] > header[role="banner"] > div {
   transition: none !important;
 }
+/* Wide capped column: the reference lays its plates in a wide centered block
+   rather than filling the viewport edge to edge. The cap keeps X's
+   virtualized list measuring against a fixed width at every viewport. */
 html[data-xlg][data-xlg-hide-sidebar] [data-xlg-main] {
-  flex: 0 1 600px !important;
-  width: 600px !important;
-  max-width: 600px !important;
+  flex: 0 1 var(--xlg-feed-width, 1180px) !important;
+  width: var(--xlg-feed-width, 1180px) !important;
+  max-width: var(--xlg-feed-width, 1180px) !important;
   min-width: 0 !important;
 }
 html[data-xlg][data-xlg-hide-sidebar] [data-xlg-main] [data-xlg-column-shell] {
   width: 100% !important;
-  max-width: 600px !important;
+  max-width: var(--xlg-feed-width, 1180px) !important;
   min-width: 0 !important;
 }
 
@@ -253,6 +256,18 @@ html[data-xlg] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetB
 }
 html[data-xlg] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetButtonInline"], [data-testid="tweetButton"]) :is(div, span) {
   color: #111b33 !important;
+}
+
+/* Paper's primary button is a print-black pill (see settings.js), so the glass
+   style's hardcoded dark label has to flip to paper white. Without this the
+   label sits at ~1.1:1 against the pill. */
+html[data-xlg][data-xlg-style="paper"] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetButtonInline"], [data-testid="tweetButton"]) {
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+html[data-xlg][data-xlg-style="paper"] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetButtonInline"], [data-testid="tweetButton"]) :is(div, span) {
+  color: #fcfcfb !important;
 }
 
 /* ---------------------------------------------------------- Column header */
@@ -548,6 +563,88 @@ html[data-xlg][data-xlg-cards][data-xlg-lite]:not([data-xlg-thread]) [data-xlg-c
   backdrop-filter: none;
   background: linear-gradient(135deg, rgba(255,255,255,.07), transparent 48%), rgba(var(--xlg-base), .88);
 }
+
+/* ------------------------------------------------------------------- Paper */
+
+/* The paper style is XGlow's editorial alternative to the glass look: opaque
+   stock on a flat dark canvas, no blur, no glow, no accent hue. It only
+   overrides what the glass rules already set, so the two styles never fight
+   over unrelated properties. */
+
+/* Canvas: flat, never the tinted radial gradients. */
+html[data-xlg][data-xlg-style="paper"] {
+  --xlg-glow-opacity: 0;
+  --xlg-glow-secondary-opacity: 0;
+  --xlg-glow-tertiary-opacity: 0;
+  background-image: none !important;
+}
+
+/* Kills every glass surface in one place: same selectors as the glass rule
+   above, so the two stay in step if upstream adds a surface. */
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
+html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before,
+html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
+  background: rgb(var(--xlg-base)) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Cards are cut stock, not glass: square corners and a hairline rule instead
+   of a rounded translucent plane. */
+html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
+  border: 1px solid var(--xlg-border) !important;
+  border-radius: 2px !important;
+  margin: 0 0 14px !important;
+  padding: 26px 30px !important;
+}
+html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)):hover {
+  border-color: rgba(var(--xlg-ui-accent-rgb), .34) !important;
+}
+
+/* Panels, toolbar and composer keep the stock but lose the pill radius. */
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
+html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before {
+  border-radius: 2px !important;
+  inset: 12px 0 !important;
+}
+
+/* Editorial type: the reference sets large, tightly tracked headings against
+   small captions with generous leading, so post bodies get room to breathe. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
+  font-size: 16px !important;
+  line-height: 1.62 !important;
+  letter-spacing: .002em !important;
+  padding-block: 5px 2px;
+}
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] span {
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="User-Name"] {
+  letter-spacing: .012em !important;
+  line-height: 1.45 !important;
+}
+/* Rules instead of glass pills: the reference separates with hairlines. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([role="separator"], hr) {
+  background: var(--xlg-border) !important;
+  border-color: var(--xlg-border) !important;
+}
+/* Media and quoted posts sit flush, like the reference's full-bleed plates. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="tweetPhoto"], [data-testid="card.wrapper"]) {
+  border-radius: 1px !important;
+  overflow: hidden !important;
+}
+/* Hover and current-page states lose their glow tints. */
+html[data-xlg][data-xlg-style="paper"] header nav :is(a, button):hover > div {
+  background: var(--xlg-hover) !important;
+  box-shadow: none !important;
+}
+html[data-xlg][data-xlg-style="paper"] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > div {
+  background: rgba(var(--xlg-ui-accent-rgb), .1) !important;
+  box-shadow: inset 2px 0 0 rgb(var(--xlg-ui-accent-rgb)) !important;
+  border-radius: 2px !important;
+}
+/* Lightweight mode has nothing to reduce once blur is gone, so paper ignores it. */
 
 /* ------------------------------------------------------------- Media queries */
 

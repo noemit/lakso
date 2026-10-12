@@ -4,6 +4,7 @@ globalThis.XGlow = (() => {
 
   const defaults = Object.freeze({
     enabled: true,
+    style: 'paper',
     accent: 'amber',
     customColor: '#97a7ff',
     tint: 50,
@@ -13,6 +14,8 @@ globalThis.XGlow = (() => {
     lite: false,
     sidebar: false
   });
+
+  const styles = Object.freeze(['paper', 'glass']);
 
   const accents = Object.freeze({
     aurora: '151, 167, 255',
@@ -47,6 +50,7 @@ globalThis.XGlow = (() => {
     if (!value || typeof value !== 'object') value = {};
     return {
       enabled: boolean(value.enabled, defaults.enabled),
+      style: styles.includes(value.style) ? value.style : defaults.style,
       accent: value.accent === 'custom' || Object.hasOwn(accents, value.accent) ? value.accent : defaults.accent,
       customColor: colorHex(value.customColor) || defaults.customColor,
       tint: clamp(value.tint, 0, 100, defaults.tint),
@@ -69,6 +73,8 @@ globalThis.XGlow = (() => {
 
   const toHex = channels => '#' + channels.map(channel => channel.toString(16).padStart(2, '0')).join('');
 
+  const hexToRgb = hex => hex.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+
   const accentChannels = settings => settings.accent === 'custom'
     ? settings.customColor.slice(1).match(/../g).map(channel => parseInt(channel, 16))
     : accents[settings.accent].split(',').map(Number);
@@ -84,12 +90,76 @@ globalThis.XGlow = (() => {
     return color;
   }
 
-  /* Derives every themed color from the accent, tint and X's own tone. */
+  /* The paper style ignores the accent: it is a monochrome, print-inspired
+     surface where a hue would break the editorial tone. Every card is opaque
+     stock and the canvas behind it is X's own dark tone, so tint only ever
+     lightens or darkens the paper, never colors it. */
+  const paper = Object.freeze({
+    ink: [37, 37, 37],
+    canvas: '#242424',
+    canvasLight: '#e3e3e3',
+    stock: [252, 252, 251],
+    stockLight: [255, 255, 255],
+    rule: [232, 232, 230],
+    ruleLight: [214, 214, 211]
+  });
+
+  /* Ink stays legible on paper at every tint: past ~35% the tint has darkened
+     the stock enough that a soft gray would fall below 4.5:1. */
+  const ink = tint => mix(paper.ink, WHITE, Math.max(0, tint - .35) * .35);
+
+  /* X draws the primary button's label in a fixed dark blue (#111b33), so the
+     button itself must stay dark whatever the tint does to the stock. Paper's
+     button is therefore a print-black pill, not the tinted ink used for text:
+     at tint 0 a tinted pill would leave that label at 1.1:1. */
+  const control = Object.freeze({ end: [17, 20, 26], start: [38, 42, 50] });
+
+  function paperPalette(settings, light) {
+    const tint = settings.tint / 100;
+    /* Paper must stay paper at every tint, because ink and stock converging
+       would destroy the contrast the whole style depends on. Tint therefore
+       never moves the stock; it moves how far the canvas behind the cards
+       separates from it, and slightly deepens the rules and the ink. */
+    const base = light ? paper.stockLight : paper.stock;
+    /* Tint moves the canvas behind the cards, never the stock: white paper
+       stays white while the surrounding page deepens. That keeps ink-on-stock
+       contrast intact and gives the cards their edge. */
+    const canvas = mix(
+      hexToRgb(light ? paper.canvasLight : paper.canvas),
+      light ? BLACK : WHITE,
+      tint * (light ? .45 : .18)
+    );
+    const rule = mix(light ? paper.ruleLight : paper.rule, BLACK, tint * .3);
+    const text = ink(tint);
+    const fade = channels => channels.join(', ').replace(/\s+/g, '');
+    return {
+      accent: fade(text),
+      hex: toHex(text),
+      // Text and outline accent is the ink; the primary button is print black
+      // with paper-white type, exactly like the reference's headline block.
+      interfaceAccent: fade(text),
+      interfaceHex: toHex(text),
+      controlEnd: fade(control.end),
+      controlStart: fade(control.start),
+      base: fade(base),
+      background: toHex(canvas),
+      glowSecondary: fade(base),
+      glowTertiary: fade(base),
+      glowOpacity: '0',
+      glowSecondaryOpacity: '0',
+      glowTertiaryOpacity: '0',
+      border: `rgba(${fade(rule)}, ${light ? .85 : .9})`
+    };
+  }
+
+  /* Derives every themed color from the style, and for the glass style from
+     the accent, tint and X's own tone. */
   function palette(value, tone = 'dark') {
     const settings = normalize(value);
+    const light = tone === 'light';
+    if (settings.style === 'paper') return paperPalette(settings, light);
     const rgb = accentChannels(settings);
     const strength = settings.tint / 100;
-    const light = tone === 'light';
     const base = mix(light ? WHITE : [18, 20, 24], rgb, strength * (light ? .08 : .24));
     const background = mix(light ? [238, 242, 246] : [8, 10, 14], rgb, strength * (light ? .16 : .09));
     // Primary buttons render dark text on the accent gradient.
@@ -114,5 +184,5 @@ globalThis.XGlow = (() => {
     };
   }
 
-  return { storageKey, defaults, accents, normalize, colorHex, palette };
+  return { storageKey, defaults, accents, styles, paper, normalize, colorHex, palette };
 })();
