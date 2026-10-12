@@ -1,4 +1,6 @@
-/* Preferences and palette, shared by the content script and the popup. */
+/* Preferences and palette, shared by the content script and the popup.
+   The XGlow global name and the xGlass storage key are deliberately kept:
+   renaming them would orphan preferences saved by an existing install. */
 globalThis.XGlow = (() => {
   const storageKey = 'xGlass';
 

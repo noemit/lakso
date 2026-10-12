@@ -1,94 +1,54 @@
-# XGlow
+# Lakso
 
-<img src="extension/icons/icon-128.png" width="96" height="96" alt="XGlow icon">
+A minimalist, clean interface for X.
 
-A liquid glass makeover for X. Same feed, a more personal look.
+Lakso is a fork of [XGlow](https://github.com/monteduro/xglow) by
+[@monteduro](https://github.com/monteduro), restyled as a monochrome editorial
+theme with a wide, centered feed. The upstream glass style and its color
+presets remain available as a switch, so nothing upstream is removed.
 
-- **Glass throughout X.** Translucent cards, soft reflections and rounded surfaces across the feed, notifications, profile covers and Chat.
-- **Your colors, your atmosphere.** Seven presets or any HEX color, with adjustable tint, blur and opacity. Changes apply instantly.
-- **A focused, centered feed.** Hide the right sidebar and give your timeline room to breathe. Bring it back with one toggle.
-- **Threads stay connected.** Related posts share a glass frame; post-detail replies keep X’s familiar flow and connection lines.
-- **Light or dark.** Follows X’s appearance, with a lightweight mode and reduced-motion support.
-- **Local and private.** No analytics, external services, API keys or account actions. Settings stay on your device.
-- **Open source, easy to install.** Load the extension directly in Chrome, with no build step or dependencies.
-
-**[Download the latest release](https://github.com/monteduro/xglow/releases/latest)** · **[Installation instructions](#install)**
-
-## Theme examples
-
-Two color themes for the same extension. You can switch presets or choose your own HEX color in Appearance.
-
-### Aurora theme
-
-![X Home with the Aurora liquid glass theme](docs/screenshots/theme-aurora.png)
-
-### Amber theme
-
-![X notifications with the Amber liquid glass theme](docs/screenshots/theme-amber.png)
-
-Screenshots show customized settings. The “Review” button in the Home image belongs to another extension.
-
-Default appearance: **Amber**, **50% tint**, **10 px blur**, **0% glass opacity**. Reset restores these values; saved preferences take priority over defaults.
+- **Paper by default.** Opaque white cards on a flat dark canvas, hairline
+  rules and square corners. No blur, no glow, no gradients.
+- **Wide and centered.** The feed column runs to 1180px instead of X's 600px.
+- **Monochrome, deliberately.** The paper style ignores theme color entirely;
+  tint moves the canvas behind the cards rather than the cards themselves, so
+  ink stays readable at every setting.
+- **Glass still there.** Switch to Glass for the original translucent look and
+  all seven color presets, plus any custom HEX.
+- **Local and private.** No analytics, external services, API keys or account
+  actions. Preferences stay on your device.
 
 ## Install
 
-1. Open the [latest release](https://github.com/monteduro/xglow/releases/latest) and download the **`xglow-<version>.zip`** asset.
-2. Extract the ZIP into a folder you will keep on your computer.
-3. Open **`chrome://extensions`** in Chrome and enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the extracted folder containing **`manifest.json`**.
-5. Reload your X tabs after saving any drafts.
-6. Open **XGlow** from Chrome’s extensions menu to change colors, effects and sidebar visibility. Pin it to the toolbar for quick access.
+1. Clone or download this repository.
+2. Open `chrome://extensions` in Chrome and enable **Developer mode**.
+3. Click **Load unpacked** and select the `extension/` folder.
+4. Reload your X tabs.
 
-**Installing from source instead?** Use **Code → Download ZIP** on this repository, extract it, and select its **`extension/`** folder in step 4.
-
-No build step, account, API key or server is needed to use the extension. Chrome 111 or newer is required by the manifest.
-
-Chrome Web Store publication is being prepared; there is no Store listing yet. Installation currently uses the GitHub release above.
-
-Read the [privacy policy](docs/PRIVACY.md). Store listing materials and submission notes are in [docs/store](docs/store/LISTING.md).
-
-To update a local installation, replace its files, click **Reload** on the extension’s card, then reload X.
-
-## Privacy
-
-The extension requests only `storage` and runs only on the X/Twitter domains listed in its manifest. Preferences are stored with `chrome.storage.local`.
-
-The runtime processes page structure, interface colors, the current X route and limited interaction signals locally to apply CSS and preserve layout behavior. It does not persist page content or interaction histories, send analytics, make network requests, or perform account actions. X Chat styling is applied inside its open shadow roots. The [privacy policy](docs/PRIVACY.md) describes this local processing and the corresponding Store disclosures.
+Chrome 111 or newer is required. There is no build step, account or API key.
 
 ## Development
 
 Development tools require Node.js 20 or newer. There are no npm dependencies.
 
-```sh
-npm run check
-npm test
-npm run build:preview
-```
+| Command | Purpose |
+| --- | --- |
+| `npm run check` | Check syntax, manifest assets and matching versions |
+| `npm test` | Run Node tests |
+| `npm run build:preview` | Generate the demo and browser suites in `public/` |
 
-Launch the generated local demo through the **unlocalhost CLI**:
+`npm test` includes one release-packaging test that shells out to the `zip`
+binary; it fails if `zip` is not installed.
 
-```sh
-unlocalhost --yes setup . --slug xglow --features https,dev
-unlocalhost up xglow
-unlocalhost url xglow
-```
+## Credit and license
 
-The saved development command is `npm run dev`. It serves generated files from `public/` and uses the port provided by unlocalhost. `public/` is generated and excluded from Git.
+MIT, unchanged from upstream. See [LICENSE](LICENSE).
 
-See [Development](docs/DEVELOPMENT.md) for browser regression suites and DOM integration constraints, and [Contributing](CONTRIBUTING.md) for change guidelines.
+The original project is [XGlow](https://github.com/monteduro/xglow). Lakso
+reuses its architecture, selector plumbing and test harness; the paper style,
+the wide layout and the popup's Style picker are additions here.
 
-## Package a release
-
-```sh
-npm run package
-```
-
-This requires the `zip` command and creates `dist/xglow-<version>.zip`. The archive contains extension files and the license, with `manifest.json` at its root. Tests, demos, screenshots and local notes are excluded.
-
-## Compatibility
-
-X changes its page structure regularly. Report layout problems with the affected route, viewport size and appearance settings; use sample content when possible. The effect uses CSS translucency and backdrop filters rather than physical glass refraction.
-
-## License
-
-[MIT](LICENSE). Independent project; not affiliated with X.
+Internal identifiers (`data-xlg-*` attributes, `--xlg-*` custom properties, the
+`XGlow` script global and the `xGlass` storage key) keep their upstream names on
+purpose: renaming the storage key would orphan preferences from an existing
+install.

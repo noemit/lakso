@@ -1,8 +1,8 @@
 {
-  "name": "xglow",
+  "name": "lakso",
   "version": "0.3.0",
   "private": true,
-  "description": "A local, customizable liquid glass theme for X.",
+  "description": "A minimalist, clean interface for X, with an editorial paper theme.",
   "license": "MIT",
   "engines": {
     "node": ">=20"

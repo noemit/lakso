@@ -1,4 +1,4 @@
-/* XGlow.
+/* Lakso, a fork of XGlow (https://github.com/monteduro/xglow).
  *
  * Every rule is gated by html[data-xlg]: removing the attribute restores X's
  * native appearance. content.js marks X's elements with data-xlg-* attributes
