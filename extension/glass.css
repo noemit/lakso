@@ -84,9 +84,11 @@ html[data-xlg][data-xlg-hide-sidebar] [data-xlg-layout] > header[role="banner"] 
 }
 /* Wide capped column: the reference lays its plates in a wide centered block
    rather than filling the viewport edge to edge. The cap keeps X's
-   virtualized list measuring against a fixed width at every viewport. */
+   virtualized list measuring against a fixed width at every viewport.
+   flex-shrink must be 0: with shrink enabled the column silently gives up
+   width to the nav rail, so a requested 1180px rendered as ~870px. */
 html[data-xlg][data-xlg-hide-sidebar] [data-xlg-main] {
-  flex: 0 1 var(--xlg-feed-width, 1180px) !important;
+  flex: 0 0 auto !important;
   width: var(--xlg-feed-width, 1180px) !important;
   max-width: var(--xlg-feed-width, 1180px) !important;
   min-width: 0 !important;
@@ -95,6 +97,19 @@ html[data-xlg][data-xlg-hide-sidebar] [data-xlg-main] [data-xlg-column-shell] {
   width: 100% !important;
   max-width: var(--xlg-feed-width, 1180px) !important;
   min-width: 0 !important;
+}
+/* Center the rail + feed pair as one block. X distributes the leftover space
+   itself, so the pair has to be centered by the wrapper rather than by
+   justify-content on a row that X controls. */
+html[data-xlg][data-xlg-hide-sidebar] [data-xlg-layout] {
+  justify-content: center !important;
+  align-items: flex-start !important;
+}
+/* The rail is fixed-width, so it must not grow to eat the freed space. */
+html[data-xlg][data-xlg-hide-sidebar] [data-xlg-layout] > header[role="banner"] {
+  flex: 0 0 var(--xlg-nav-width, 275px) !important;
+  width: var(--xlg-nav-width, 275px) !important;
+  max-width: var(--xlg-nav-width, 275px) !important;
 }
 
 /* -------------------------------------------------------------- Chat route */
@@ -698,9 +713,40 @@ html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[dat
   fill: rgba(var(--xlg-ui-accent-rgb), .72) !important;
   color: rgba(var(--xlg-ui-accent-rgb), .72) !important;
 }
-/* The reply-context line above a reply. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="replyContext"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="socialContext"] {
+/* X writes its theme color as an INLINE style on nearly every text wrapper,
+   and inline styles are exactly what a stylesheet cannot reach selectively.
+   Rather than chase each test id, cover the whole card: any element that
+   carries X's own inline color inherits the paper ink instead. Elements that
+   should keep a distinct color (the title, the verified badge, links) are
+   re-applied with higher specificity below. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [style*="color"] {
+  color: rgb(var(--xlg-ui-accent-rgb)) !important;
+}
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [style*="color"] * {
+  color: inherit !important;
+}
+/* Inline links and mentions keep the accent, not the body ink. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] [style*="color"] :is(a, [role="link"]) {
+  color: rgb(var(--xlg-accent-rgb)) !important;
+}
+/* Secondary lines: handles, timestamps, counts and context labels. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="User-Name"] > div:last-child [style*="color"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] [style*="color"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) [style*="color"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) [style*="color"] * {
+  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
+}
+
+/* The reply and repost context lines above a post. X sets an inline color on
+   BOTH the link and a nested span, so coloring only the container leaves the
+   inner span at X's pale theme gray. Every layer is covered here. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]),
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) * {
+  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
+}
+/* X also paints the inline color on a wrapper div just inside the article for
+   the "X reposted" row, which is outside the two test ids above. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] > div:first-child [style*="color"] {
   color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
 }
 
