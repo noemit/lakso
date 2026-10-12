@@ -488,6 +488,9 @@
     for (const [property, key] of PALETTE_PROPERTIES) root.style.setProperty(property, palette[key]);
     root.style.setProperty('--xlg-blur', `${settings.blur}px`);
     root.style.setProperty('--xlg-opacity', String(settings.opacity / 100));
+    // The feed width is read by glass.css as a length, so publish it there
+    // rather than duplicating the value in a second place.
+    root.style.setProperty('--xlg-feed-width', `${settings.feedWidth}px`);
     syncChat();
   }
 

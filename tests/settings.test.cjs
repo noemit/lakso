@@ -32,7 +32,7 @@ test('Amber defaults and explicit zero effects survive storage normalization', (
 });
 
 test('default preferences are exactly the shipped baseline', () => {
-  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, style: 'paper', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false });
+  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, style: 'paper', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false, feedWidth: 1180 });
   assert.ok(Object.isFrozen(XGlow.defaults));
   assert.equal(XGlow.storageKey, 'xGlass');
 });

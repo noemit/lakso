@@ -620,19 +620,54 @@ html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [d
 }
 
 /* Cards are cut stock, not glass: square corners and a hairline rule instead
-   of a rounded translucent plane. */
+   of a rounded translucent plane. X already pads the article through its own
+   atomic classes, so this replaces that padding rather than adding to it:
+   stacking both produced insets that did not line up with X's avatar gutter. */
 html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
   border: 1px solid var(--xlg-border) !important;
   border-radius: 2px !important;
   margin: 0 0 14px !important;
-  padding: 26px 30px !important;
+  padding: 22px 24px !important;
+}
+/* X's inner columns carry their own gutters; zero them so the single padding
+   above is the only inset, keeping avatar and text aligned at any width. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-xlg-cell-shell] {
+  padding: 0 !important;
+}
+/* The avatar sits as a fixed 44px column. At a wide feed its default margin
+   reads as a stray indent, so tighten it toward the card edge. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="Tweet-User-Avatar"],
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid^="UserAvatar-Container-"] {
+  margin-right: 0 !important;
+}
+/* Post body sits just below the author line rather than floating. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
+  margin-top: 6px;
+}
+/* The action row reads as a ruled footer, spanning the card like the
+   reference's hairline dividers. */
+html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] {
+  margin-top: 14px !important;
+  padding-top: 10px !important;
+  border-top: 1px solid var(--xlg-border) !important;
 }
 html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)):hover {
   border-color: rgba(var(--xlg-ui-accent-rgb), .34) !important;
 }
 
-/* Panels, toolbar and composer keep the stock but lose the pill radius. */
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
+/* The toolbar spans the feed column, not the viewport, so its tabs line up
+   with the cards below instead of overhanging them. */
+html[data-xlg][data-xlg-style="paper"] [data-xlg-toolbar] {
+  margin: 12px 0 14px !important;
+  padding-inline: 24px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--xlg-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Panels, composer and search keep the stock but lose the pill radius. */
+html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
 html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before {
   border-radius: 2px !important;
   inset: 12px 0 !important;

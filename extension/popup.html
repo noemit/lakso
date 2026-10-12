@@ -22,9 +22,11 @@
       <input class="switch" id="enabled" type="checkbox" role="switch">
     </div>
     <div class="row">
-      <div><label for="sidebar">Right sidebar</label><small>Trends, news and suggestions</small></div>
+      <div><label for="sidebar">Right sidebar</label><small>Trends, news and suggestions. Off also widens the feed.</small></div>
       <input class="switch" id="sidebar" type="checkbox" role="switch">
     </div>
+    <div class="slider-label"><label for="feedWidth">Feed width</label><output id="feedWidthValue" for="feedWidth"></output></div>
+    <input id="feedWidth" type="range" min="600" max="1600" step="20" aria-description="Width of the feed column when the right sidebar is hidden">
 
     <fieldset>
       <legend>Style</legend>

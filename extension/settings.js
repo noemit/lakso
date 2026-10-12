@@ -14,7 +14,11 @@ globalThis.XGlow = (() => {
     opacity: 0,
     cards: true,
     lite: false,
-    sidebar: false
+    sidebar: false,
+    // Width of the feed column once the right sidebar is hidden. Exposed as a
+    // slider because the width is otherwise impossible to discover: it used to
+    // ride on the sidebar toggle, which reads only as "hide Trends".
+    feedWidth: 1180
   });
 
   const styles = Object.freeze(['paper', 'glass']);
@@ -60,7 +64,8 @@ globalThis.XGlow = (() => {
       opacity: clamp(value.opacity, 0, 90, defaults.opacity),
       cards: boolean(value.cards, defaults.cards),
       lite: boolean(value.lite, defaults.lite),
-      sidebar: boolean(value.sidebar, defaults.sidebar)
+      sidebar: boolean(value.sidebar, defaults.sidebar),
+      feedWidth: clamp(value.feedWidth, 600, 1600, defaults.feedWidth)
     };
   }
 
