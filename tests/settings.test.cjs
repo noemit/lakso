@@ -32,7 +32,7 @@ test('Amber defaults and explicit zero effects survive storage normalization', (
 });
 
 test('default preferences are exactly the shipped baseline', () => {
-  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, style: 'paper', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false, feedWidth: 1180, zebra: false });
+  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, style: 'paper', theme: 'paper', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false, feedWidth: 1180, zebra: false });
   assert.ok(Object.isFrozen(XGlow.defaults));
   assert.equal(XGlow.storageKey, 'xGlass');
 });
@@ -48,39 +48,97 @@ test('unknown or legacy styles fall back to paper and keep their accents', () =>
   assert.equal(XGlow.normalize({ style: 'glass', accent: 'ocean' }).accent, 'ocean');
 });
 
-test('the paper style keeps one palette in both tones whatever the accent is', () => {
-  const paper = accent => XGlow.palette({ style: 'paper', accent, tint: 50 });
-  // Every accent produces identical paper: the style ignores the accent hue.
-  const first = paper('ocean');
-  for (const accent of [...Object.keys(XGlow.accents), 'custom']) {
-    assert.deepEqual(paper(accent), first, `paper must not vary with ${accent}`);
-  }
-  const channels = value => value.split(',').map(Number);
-  // "Neutral" means no hue, not exactly equal channels: the paper palette uses
-  // a print black with a faint cool cast, the way ink on stock does.
-  // The paper palette is warm by design, so the invariant is not "gray" but
-  // "never hue-shifted by the accent, and always red >= blue".
-  const isWarm = value => { const [r, , b] = channels(value); return r >= b; };
-  for (const tone of ['dark', 'light']) {
-    const palette = XGlow.palette({ style: 'paper', tint: 50 }, tone);
-    for (const key of ['accent', 'base', 'interfaceAccent', 'controlStart', 'controlEnd', 'glowSecondary']) {
-      assert.ok(isWarm(palette[key]), `${key} must stay warm in ${tone}: ${palette[key]}`);
+test('every theme is valid and unknown themes fall back', () => {
+  assert.deepEqual(XGlow.themeNames, ['paper', 'cream', 'blush', 'sage', 'dusk', 'amber']);
+  for (const name of XGlow.themeNames) {
+    assert.equal(XGlow.normalize({ theme: name }).theme, name);
+    const theme = XGlow.themes[name];
+    for (const key of ['stock', 'canvas', 'ink', 'rule', 'accent']) {
+      assert.ok(Array.isArray(theme[key]) && theme[key].length === 3,
+        `${name}.${key} must be an RGB triplet`);
+      assert.ok(theme[key].every(c => Number.isInteger(c) && c >= 0 && c <= 255),
+        `${name}.${key} must be in range: ${theme[key]}`);
     }
-    // No glow: the paper canvas is flat.
-    assert.equal(palette.glowOpacity, '0');
-    assert.equal(palette.glowSecondaryOpacity, '0');
-    assert.equal(palette.glowTertiaryOpacity, '0');
+    assert.ok(typeof theme.label === 'string' && theme.label, `${name} needs a label`);
+    assert.ok(['press', 'rise', 'breathe', 'sheen'].includes(theme.motion),
+      `${name} needs a known motion: ${theme.motion}`);
   }
-  // The canvas follows X's tone, and tint deepens it to separate it from the
-  // white stock; it never picks up a hue from the accent.
-  for (const tone of ['dark', 'light']) {
-    const flat = XGlow.palette({ style: 'paper', tint: 0 }, tone).background;
-    assert.equal(flat, tone === 'light' ? XGlow.paper.canvasLight : XGlow.paper.canvas);
-    const tinted = XGlow.palette({ style: 'paper', tint: 100 }, tone).background;
-    assert.notEqual(tinted, flat);
-    const rgb = tinted.slice(1).match(/../g).map(h => parseInt(h, 16));
-    assert.ok(rgb[0] >= rgb[2], `canvas must stay warm: ${tinted}`);
+  for (const theme of ['', 'PAPER', 'nope', null, 7, {}]) {
+    assert.equal(XGlow.normalize({ theme }).theme, XGlow.defaults.theme);
   }
+  // A pre-theme install has no theme field and must land on the default.
+  assert.equal(XGlow.normalize({ style: 'paper', tint: 40 }).theme, 'paper');
+});
+
+test('the theme determines the palette, not the accent or X tone', () => {
+  for (const name of XGlow.themeNames) {
+    const first = XGlow.palette({ style: 'paper', theme: name, tint: 50 });
+    // The accent presets belong to the glass style; a theme ignores them.
+    for (const accent of [...Object.keys(XGlow.accents), 'custom']) {
+      assert.deepEqual(XGlow.palette({ style: 'paper', theme: name, accent, tint: 50 }), first,
+        `${name} must not vary with accent ${accent}`);
+    }
+    // And a theme is the same in either of X's tones, because it declares its
+    // own stock rather than following X.
+    assert.deepEqual(XGlow.palette({ style: 'paper', theme: name, tint: 50 }, 'light'), first);
+  }
+  // Different themes must actually differ.
+  const stocks = XGlow.themeNames.map(n => XGlow.palette({ style: 'paper', theme: n, tint: 50 }).base);
+  assert.equal(new Set(stocks).size, stocks.length, 'every theme needs its own stock');
+});
+
+test('each theme keeps its ink and accent legible on its own stock', () => {
+  const channels = value => value.split(',').map(Number);
+  for (const name of XGlow.themeNames) {
+    for (let tint = 0; tint <= 100; tint += 5) {
+      const p = XGlow.palette({ style: 'paper', theme: name, tint });
+      const ink = XGlow.contrast(channels(p.interfaceAccent), channels(p.base));
+      assert.ok(ink >= 4.5, `${name} ink at tint ${tint}: ${ink.toFixed(2)}`);
+      // The accent is used for links and the active tab, so it must clear AA
+      // against the stock too. An absolute luminance test let 3.0:1 through.
+      const accent = XGlow.contrast(channels(p.accent), channels(p.base));
+      assert.ok(accent >= 4.5, `${name} accent at tint ${tint}: ${accent.toFixed(2)}`);
+      // The button label is the stock colour on an ink-filled pill.
+      const label = XGlow.contrast(channels(p.controlEnd), channels(p.base));
+      assert.ok(label >= 4.5, `${name} button label at tint ${tint}: ${label.toFixed(2)}`);
+    }
+  }
+});
+
+test('the alternating stripe is a matched pair on every theme', () => {
+  const channels = value => value.split(',').map(Number);
+  for (const name of XGlow.themeNames) {
+    const p = XGlow.palette({ style: 'paper', theme: name, tint: 50 });
+    assert.notEqual(p.altStock, p.base, `${name} needs a distinct stripe`);
+    // A step large enough to read, small enough to stay one palette. The
+    // luminance ratio of a good stripe sits in a narrow band.
+    const ratio = XGlow.contrast(channels(p.altStock), channels(p.base));
+    assert.ok(ratio > 1.02 && ratio < 1.25,
+      `${name} stripe is too subtle or too strong: ${ratio.toFixed(3)}`);
+  }
+});
+
+test('every theme separates its cards from the page behind them', () => {
+  const channels = value => value.split(',').map(Number);
+  for (const name of XGlow.themeNames) {
+    const p = XGlow.palette({ style: 'paper', theme: name, tint: 0 });
+    const canvas = channels(p.background.slice(1).match(/../g).map(h => parseInt(h, 16)).join(','));
+    const ratio = XGlow.contrast(channels(p.base), canvas);
+    // A card has to read as a card: below ~1.5 the surface disappears, above
+    // ~2.5 the page reads as a void instead of a surface. Paper was at 14.8 and
+    // Dusk at 1.04 before this was asserted.
+    assert.ok(ratio >= 1.5 && ratio <= 2.5,
+      `${name} cards vs canvas: ${ratio.toFixed(2)}`);
+  }
+});
+
+test('the glow only exists when the theme animates one', () => {
+  for (const name of XGlow.themeNames) {
+    // Zero tint means no glow, so a still theme stays still.
+    assert.equal(XGlow.palette({ style: 'paper', theme: name, tint: 0 }).glowOpacity, '0');
+  }
+  const moving = XGlow.palette({ style: 'paper', theme: 'dusk', tint: 50 });
+  assert.ok(Number(moving.glowOpacity) > 0, 'an animated theme needs a visible glow');
 });
 
 test('paper ink stays readable against paper stock at every tint', () => {

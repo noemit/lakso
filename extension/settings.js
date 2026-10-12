@@ -7,6 +7,8 @@ globalThis.XGlow = (() => {
   const defaults = Object.freeze({
     enabled: true,
     style: 'paper',
+    // Which colour theme; see `themes`. Independent of the glass/paper style.
+    theme: 'paper',
     accent: 'amber',
     customColor: '#97a7ff',
     tint: 50,
@@ -23,6 +25,51 @@ globalThis.XGlow = (() => {
     // has opaque stock to alternate between.
     zebra: false
   });
+
+  /* ------------------------------------------------------------- Themes */
+
+  /* Each theme is data, not code: a stock (card), a canvas (page behind the
+     cards), an ink, and an accent. palette() derives every other colour from
+     these, so a theme is one entry here plus a label in popup.html.
+
+     `motion` selects the animation character (see glass.css): 'rise' lifts
+     cards on hover, 'breathe' pulses the theme glow, 'sheen' sweeps a
+     highlight, 'press' is the quiet default. All of them respect
+     prefers-reduced-motion. */
+  const themes = Object.freeze({
+    paper: Object.freeze({
+      label: 'Paper',
+      stock: [249, 244, 225], canvas: [176, 168, 150], ink: [42, 32, 27],
+      rule: [222, 207, 176], accent: [176, 106, 62], motion: 'press'
+    }),
+    cream: Object.freeze({
+      label: 'Cream',
+      stock: [253, 251, 246], canvas: [203, 199, 189], ink: [38, 35, 30],
+      rule: [226, 220, 207], accent: [196, 138, 74], motion: 'rise'
+    }),
+    blush: Object.freeze({
+      label: 'Blush',
+      stock: [255, 249, 244], canvas: [215, 196, 194], ink: [58, 38, 40],
+      rule: [238, 219, 213], accent: [214, 118, 106], motion: 'breathe'
+    }),
+    sage: Object.freeze({
+      label: 'Sage',
+      stock: [250, 250, 243], canvas: [196, 201, 182], ink: [44, 52, 38],
+      rule: [216, 222, 200], accent: [124, 148, 92], motion: 'rise'
+    }),
+    dusk: Object.freeze({
+      label: 'Dusk',
+      stock: [32, 33, 38], canvas: [67, 67, 69], ink: [232, 230, 236],
+      rule: [58, 59, 66], accent: [168, 152, 240], motion: 'breathe'
+    }),
+    amber: Object.freeze({
+      label: 'Amber',
+      stock: [43, 36, 28], canvas: [72, 69, 66], ink: [247, 236, 218],
+      rule: [72, 59, 45], accent: [254, 175, 72], motion: 'sheen'
+    })
+  });
+
+  const themeNames = Object.freeze(Object.keys(themes));
 
   const styles = Object.freeze(['paper', 'glass']);
 
@@ -60,6 +107,7 @@ globalThis.XGlow = (() => {
     return {
       enabled: boolean(value.enabled, defaults.enabled),
       style: styles.includes(value.style) ? value.style : defaults.style,
+      theme: Object.hasOwn(themes, value.theme) ? value.theme : defaults.theme,
       accent: value.accent === 'custom' || Object.hasOwn(accents, value.accent) ? value.accent : defaults.accent,
       customColor: colorHex(value.customColor) || defaults.customColor,
       tint: clamp(value.tint, 0, 100, defaults.tint),
@@ -90,71 +138,91 @@ globalThis.XGlow = (() => {
     ? settings.customColor.slice(1).match(/../g).map(channel => parseInt(channel, 16))
     : accents[settings.accent].split(',').map(Number);
 
-  /* Fades the accent towards `target` until `isReadable` holds, so very dark
-     or very light custom colors still produce legible controls. */
+  /* Fades `rgb` towards `target` until `isReadable` holds. `isReadable`
+     receives the candidate triplet, so callers can test real contrast rather
+     than an absolute luminance: an absolute threshold exits immediately when
+     the colour is already close to it, which is how a 3.0:1 accent got through.
+     `legacyLuminance` predicates (which expect a number) are still accepted so
+     the glass style keeps its original behaviour. */
+  /* Fades `rgb` towards `target` until `isReadable(candidate)` holds, where
+     `candidate` is an RGB triplet. Callers test real contrast rather than an
+     absolute luminance: an absolute threshold exits at the first step whenever
+     the colour already sits near it, which is how a 3.0:1 accent once got
+     through. */
   function readableVariant(rgb, target, isReadable) {
     let color = rgb, weight = 1;
-    while (!isReadable(luminance(color)) && weight > 0) {
+    while (!isReadable(color) && weight > 0) {
       weight -= .05;
       color = mix(target, rgb, Math.max(0, weight));
     }
     return color;
   }
 
-  /* The paper style ignores the accent: it is a monochrome, print-inspired
-     surface where a hue would break the editorial tone. Every card is opaque
-     stock and the canvas behind it is X's own dark tone, so tint only ever
-     lightens or darkens the paper, never colors it. */
-  const paper = Object.freeze({
-    // Warm, earthy paper: cream stock on a deep brown ground, sampled from the
-    // reference. Deliberately not neutral: every value has red above blue.
-    ink: [42, 32, 27],
-    canvas: '#2c2421',
-    canvasLight: '#d9cdb8',
-    stock: [249, 244, 225],
-    stockLight: [247, 245, 224],
-    rule: [222, 207, 176],
-    ruleLight: [205, 189, 158]
-  });
+  /* WCAG contrast between two channel triplets, used to keep an accent
+     legible against its own stock. */
+  function contrast(a, b) {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + .05) / (lo + .05);
+  }
 
-  /* Ink stays legible on paper at every tint: past ~35% the tint has darkened
-     the stock enough that a soft gray would fall below 4.5:1. */
-  const ink = tint => mix(paper.ink, WHITE, Math.max(0, tint - .35) * .35);
+  /* Themes are opaque by design: each one declares a stock (card), a canvas
+     (the page behind the cards), an ink and an accent, and everything else is
+     derived. `isDark` is read from the theme's own stock so a dark theme works
+     whether X is in light or dark mode; the theme decides, not X. */
+  const isDarkTheme = theme => luminance(theme.stock) < .4;
 
-  /* X draws the primary button's label in a fixed dark blue (#111b33), so the
-     button itself must stay dark whatever the tint does to the stock. Paper's
-     button is therefore a deep brown pill, not the tinted ink used for text:
-     at tint 0 a tinted pill would leave that label at 1.1:1. */
-  const control = Object.freeze({ end: [42, 32, 27], start: [74, 58, 49] });
+  /* Whether the active settings resolve to a dark stock, so callers can pick a
+     shadow that reads against it without re-deriving the palette. */
+  const settingsAreDark = value => {
+    const settings = normalize(value);
+    if (settings.style !== 'paper') return true;
+    return isDarkTheme(themes[settings.theme]);
+  };
 
-  function paperPalette(settings, light) {
+  /* Ink stays legible on stock at every tint: past ~35% the tint has moved the
+     stock far enough that a soft gray would fall below 4.5:1. */
+  const inkFor = (theme, tint) => {
+    const light = !isDarkTheme(theme);
+    return mix(theme.ink, light ? WHITE : BLACK, Math.max(0, tint - .35) * .35);
+  };
+
+  /* The primary button is filled with the ink and labelled in the stock, so it
+     reads as a solid pill in the theme's own colours. X hardcodes a dark
+     label (#111b33) for its light glass gradient, which glass.css overrides. */
+  const controlFor = (theme, ink) => {
+    const light = !isDarkTheme(theme);
+    return { end: ink, start: mix(ink, light ? BLACK : WHITE, .35) };
+  };
+
+  function themePalette(settings, theme) {
     const tint = settings.tint / 100;
-    /* Paper must stay paper at every tint, because ink and stock converging
-       would destroy the contrast the whole style depends on. Tint therefore
-       never moves the stock; it moves how far the canvas behind the cards
-       separates from it, and slightly deepens the rules and the ink. */
-    const base = light ? paper.stockLight : paper.stock;
+    const dark = isDarkTheme(theme);
+    /* Tint never moves the stock, because ink and stock converging would
+       destroy the contrast the whole theme depends on. It moves the canvas
+       behind the cards, so the cards keep their edge, and slightly deepens
+       the rules and the ink. */
+    const base = theme.stock;
     /* The alternating stripe is a fixed small step off the stock rather than
        an absolute colour, so it stays a matched pair at every tint. 4% keeps
        the two shades reading as one palette; a larger step starts looking
        like two different card styles instead of a rhythm. */
-    const alt = mix(base, BLACK, .04);
-    /* Tint moves the canvas behind the cards, never the stock: white paper
-       stays white while the surrounding page deepens. That keeps ink-on-stock
-       contrast intact and gives the cards their edge. */
-    const canvas = mix(
-      hexToRgb(light ? paper.canvasLight : paper.canvas),
-      light ? BLACK : WHITE,
-      tint * (light ? .45 : .18)
+    const alt = mix(base, dark ? WHITE : BLACK, .04);
+    const canvas = mix(theme.canvas, dark ? WHITE : BLACK, tint * (dark ? .18 : .3));
+    const rule = mix(theme.rule, dark ? WHITE : BLACK, tint * .18);
+    const text = inkFor(theme, tint);
+    const control = controlFor(theme, text);
+    /* The accent is used for links, the active tab and the new-posts pill, so
+       it has to clear 4.5:1 against the stock. The test is real contrast, not
+       an absolute luminance, so it holds for every theme. */
+    const accent = readableVariant(
+      theme.accent,
+      dark ? WHITE : BLACK,
+      candidate => contrast(candidate, base) >= 4.5
     );
-    const rule = mix(light ? paper.ruleLight : paper.rule, BLACK, tint * .3);
-    const text = ink(tint);
     const fade = channels => channels.join(', ').replace(/\s+/g, '');
     return {
-      accent: fade(text),
-      hex: toHex(text),
-      // Text and outline accent is the ink; the primary button is print black
-      // with paper-white type, exactly like the reference's headline block.
+      accent: fade(accent),
+      hex: toHex(accent),
       interfaceAccent: fade(text),
       interfaceHex: toHex(text),
       controlEnd: fade(control.end),
@@ -162,29 +230,33 @@ globalThis.XGlow = (() => {
       base: fade(base),
       altStock: fade(alt),
       background: toHex(canvas),
-      glowSecondary: fade(base),
-      glowTertiary: fade(base),
-      glowOpacity: '0',
-      glowSecondaryOpacity: '0',
-      glowTertiaryOpacity: '0',
-      border: `rgba(${fade(rule)}, ${light ? .85 : .9})`
+      /* A soft glow built from the accent. Dusk and Amber use it for their
+         ambient breathing motion; the quiet themes set it to zero. */
+      glowSecondary: fade(mix(base, accent, dark ? .18 : .12)),
+      glowTertiary: fade(mix(base, accent, dark ? .1 : .06)),
+      glowOpacity: String(tint * (dark ? .5 : .32)),
+      glowSecondaryOpacity: String(tint * (dark ? .34 : .22)),
+      glowTertiaryOpacity: String(tint * (dark ? .3 : .2)),
+      border: `rgba(${fade(rule)}, ${dark ? .55 : .8})`
     };
   }
 
-  /* Derives every themed color from the style, and for the glass style from
-     the accent, tint and X's own tone. */
+  /* Derives every themed color. The paper style is theme-driven: the chosen
+     theme supplies stock, canvas, ink and accent. The glass style keeps its
+     original behaviour, deriving from the accent and X's own tone, so the two
+     styles stay independent and a glass user's saved accent keeps working. */
   function palette(value, tone = 'dark') {
     const settings = normalize(value);
     const light = tone === 'light';
-    if (settings.style === 'paper') return paperPalette(settings, light);
+    if (settings.style === 'paper') return themePalette(settings, themes[settings.theme]);
     const rgb = accentChannels(settings);
     const strength = settings.tint / 100;
     const base = mix(light ? WHITE : [18, 20, 24], rgb, strength * (light ? .08 : .24));
     const background = mix(light ? [238, 242, 246] : [8, 10, 14], rgb, strength * (light ? .16 : .09));
     // Primary buttons render dark text on the accent gradient.
-    const controlEnd = readableVariant(rgb, WHITE, value => value >= .25);
+    const controlEnd = readableVariant(rgb, WHITE, candidate => luminance(candidate) >= .25);
     // Accents used as text or outlines must contrast with the page.
-    const interfaceAccent = light ? readableVariant(rgb, BLACK, value => value <= .3) : controlEnd;
+    const interfaceAccent = light ? readableVariant(rgb, BLACK, candidate => luminance(candidate) <= .3) : controlEnd;
     return {
       accent: rgb.join(', '),
       hex: toHex(rgb),
@@ -203,5 +275,5 @@ globalThis.XGlow = (() => {
     };
   }
 
-  return { storageKey, defaults, accents, styles, paper, normalize, colorHex, palette };
+  return { storageKey, defaults, accents, styles, themes, themeNames, normalize, colorHex, palette, contrast, settingsAreDark };
 })();

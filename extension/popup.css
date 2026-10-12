@@ -194,3 +194,19 @@ button:disabled, input:disabled { opacity: .5; cursor: wait; }
   background: linear-gradient(135deg, #f4b95259, #ffffff1a 60%, #0000);
   backdrop-filter: blur(3px);
 }
+
+/* Theme picker: a 3-column grid where each swatch shows that theme's real
+   stock with its accent as a dot, so the choice reads before it is applied. */
+.swatches.themes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.swatches.themes button { position: relative; }
+.swatches.themes i { border: 1px solid #ffffff1f; }
+.swatches.themes button::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--theme-accent, transparent);
+}

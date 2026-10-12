@@ -395,7 +395,9 @@ html[data-xlg][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColum
   box-shadow: inset 0 1px 0 var(--xlg-glint), 0 6px 24px var(--xlg-shadow) !important;
   -webkit-backdrop-filter: blur(var(--xlg-blur)) saturate(135%) !important;
   backdrop-filter: blur(var(--xlg-blur)) saturate(135%) !important;
-  transition: border-color .18s ease, background-color .18s ease;
+  /* No `transition` here: the motion layer owns transitions, and setting one
+     here silently overrode it because this rule's :not() chains out-specify
+     the motion rules (0,9,2 against 0,6,2), which killed the hover lift. */
 }
 html[data-xlg][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)):hover {
   border-color: rgba(var(--xlg-ui-accent-rgb), .38) !important;
@@ -798,12 +800,156 @@ html[data-xlg][data-xlg-style="paper"] header nav a:is([aria-current="page"], [d
 }
 /* Lightweight mode has nothing to reduce once blur is gone, so paper ignores it. */
 
-/* ------------------------------------------------------------- Media queries */
+/* --------------------------------------------- Motion (every theme) */
+
+/* The animation character is per theme, selected by data-xlg-motion (set from
+   the theme's `motion` in settings.js). Everything here is opacity,
+   transform and colour only, so each one stays on the compositor and cannot
+   thrash layout in X's virtualized timeline. X recycles post nodes on scroll,
+   so no rule animates on a loop against a post; the loops are confined to the
+   canvas and the glow, which are single fixed elements. */
+
+/* Cards settle in rather than appearing. Post nodes mount as you scroll, so
+   this reads as the feed breathing rather than as a one-off page animation.
+
+   Only `opacity` is animated, never `transform`: this runs with `both` fill
+   mode, and a filling animation outranks a normal declaration for good, so
+   animating transform here permanently overrode the :hover lift (the rule
+   matched and declared translateY(-2px) while the computed value stayed
+   identity). Leaving transform alone also keeps it free for the hover rule. */
+@keyframes xlg-settle {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] {
+  animation: xlg-settle .28s ease-out both;
+}
+
+/* Hover: the card lifts a hair and its rule warms. Only transform and colour,
+   never margin, so neighbouring posts do not move.
+
+   This has to out-specify the paper card rule above, which sets its own
+   shorter `transition` and wins on specificity (`:not()` chains count towards
+   it), silently dropping the transform transition and killing the lift. */
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+html[data-xlg][data-xlg-motion="rise"] [data-testid="primaryColumn"] article[data-testid="tweet"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px var(--xlg-shadow);
+}
+/* 'press' is the quiet default: no lift, only a colour step. */
+html[data-xlg][data-xlg-motion="press"] [data-testid="primaryColumn"] article[data-testid="tweet"]:hover {
+  transform: none;
+}
+
+/* A sheen sweeps the card on hover. It is a pseudo-element on the card so it
+   cannot affect layout, and it is clipped by the card's own radius. */
+html[data-xlg][data-xlg-motion="sheen"] [data-testid="primaryColumn"] article[data-testid="tweet"] {
+  position: relative;
+  overflow: hidden;
+}
+html[data-xlg][data-xlg-motion="sheen"] [data-testid="primaryColumn"] article[data-testid="tweet"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.14) 45%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform .55s ease;
+}
+html[data-xlg][data-xlg-motion="sheen"] [data-testid="primaryColumn"] article[data-testid="tweet"]:hover::after {
+  transform: translateX(120%);
+}
+
+/* 'breathe' pans the canvas glow slowly, so a still feed still feels alive.
+   Fixed-position and animating only background-position, so it never forces a
+   repaint of the post list. */
+@keyframes xlg-breathe {
+  0%   { background-position: 0% 0%, 100% 30%, 50% 100%; }
+  50%  { background-position: 12% 6%, 88% 40%, 45% 92%; }
+  100% { background-position: 0% 0%, 100% 30%, 50% 100%; }
+}
+html[data-xlg][data-xlg-motion="breathe"] {
+  animation: xlg-breathe 24s ease-in-out infinite;
+}
+
+/* Action buttons warm towards the accent on hover, and the count eases in as
+   X swaps the number. */
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] button,
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] a {
+  transition: color .16s ease, transform .16s ease;
+}
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] :is(button, a):hover {
+  transform: translateY(-1px);
+}
+html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="app-text-transition-container"] {
+  transition: opacity .18s ease;
+}
+
+/* Tabs and nav items ease their indicator instead of snapping. */
+html[data-xlg][data-xlg-motion] :is(header nav a, header nav button, [role="tab"]) > div {
+  transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+html[data-xlg][data-xlg-motion] [role="tab"] {
+  transition: color .18s ease;
+}
+/* The active-tab underline grows from the centre. */
+html[data-xlg][data-xlg-motion] [role="tab"][aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: var(--xlg-accent);
+  animation: xlg-underline .3s ease forwards;
+}
+@keyframes xlg-underline {
+  from { width: 0; transform: translateX(0); }
+  to   { width: 56px; transform: translateX(-28px); }
+}
+
+/* The new-posts pill drops in and keeps a slow pulse, which is the one
+   element where motion is genuinely informative. */
+@keyframes xlg-pill-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+html[data-xlg][data-xlg-motion] [data-testid="pillLabel"],
+html[data-xlg][data-xlg-motion] [data-testid="pillLabel"] * {
+  transition: color .2s ease;
+}
+
+/* Chat and menu surfaces fade in. */
+html[data-xlg][data-xlg-motion] :is([data-testid="Dropdown"], [role="menu"], [role="dialog"]) {
+  animation: xlg-settle .18s ease-out both;
+}
+
+/* --------------------------------------------- Media queries */
 
 @media (prefers-reduced-motion: reduce) {
+  /* Motion is opt-in per theme, but a user asking for less motion outranks the
+     theme. Every animation and transition added by the motion layer is
+     cancelled here, and the entrance animations resolve to their end state so
+     nothing is left invisible. */
   html[data-xlg] [data-xlg-new-posts],
   html[data-xlg] :is(header nav a > div, header nav button > div, [role="tab"], article[data-testid="tweet"], article[data-testid="notification"]) {
     transition: none !important;
+  }
+  html[data-xlg][data-xlg-motion],
+  html[data-xlg][data-xlg-motion] :is(
+    [data-testid="primaryColumn"] article[data-testid="tweet"],
+    [data-testid="Dropdown"], [role="menu"], [role="dialog"],
+    [role="tab"][aria-selected="true"]::after) {
+    animation: none !important;
+  }
+  html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  html[data-xlg][data-xlg-motion] [data-testid="primaryColumn"] article[data-testid="tweet"]::after {
+    display: none !important;
   }
 }
 

@@ -518,6 +518,13 @@
     root.toggleAttribute('data-xlg', settings.enabled);
     root.setAttribute('data-xlg-tone', nativeTone);
     root.setAttribute('data-xlg-style', settings.style);
+    root.setAttribute('data-xlg-theme', settings.theme);
+    // The animation character belongs to the theme, and the motion layer only
+    // runs in the paper style, which is the one with opaque themed surfaces.
+    root.setAttribute(
+      'data-xlg-motion',
+      settings.style === 'paper' ? (XGlow.themes[settings.theme]?.motion || 'press') : 'press'
+    );
     root.toggleAttribute('data-xlg-cards', settings.cards);
     root.toggleAttribute('data-xlg-lite', settings.lite);
     root.toggleAttribute('data-xlg-hide-sidebar', !settings.sidebar);
@@ -529,6 +536,13 @@
     // The feed width is read by glass.css as a length, so publish it there
     // rather than duplicating the value in a second place.
     root.style.setProperty('--xlg-feed-width', `${settings.feedWidth}px`);
+    /* A shadow that matches the theme's own darkness, so the hover lift reads
+       on light and dark stocks alike. Dark stocks need a deeper shadow or it
+       is invisible; light stocks need a warm one or it looks like dirt. */
+    root.style.setProperty(
+      '--xlg-shadow',
+      XGlow.settingsAreDark(settings) ? 'rgba(0, 0, 0, .5)' : 'rgba(58, 46, 32, .16)'
+    );
     syncChat();
   }
 

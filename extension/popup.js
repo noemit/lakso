@@ -18,6 +18,8 @@
   const hexInput = $('customHex');
   const swatches = [...document.querySelectorAll('[data-accent]')];
   const styleButtons = [...document.querySelectorAll('[data-style]')];
+  const themeButtons = [...document.querySelectorAll('[data-theme]')];
+  const themeFieldset = $('themeFieldset');
   const accentFieldset = $('accentFieldset');
   const controls = [...document.querySelectorAll('input, button')];
   let settings = XGlow.normalize();
@@ -48,6 +50,15 @@
     // The paper style is monochrome: the accent controls would do nothing,
     // so they are hidden rather than left there lying to the user.
     accentFieldset.hidden = settings.style === 'paper';
+    // Themes are the paper style's palette; glass keeps its own accent system.
+    themeFieldset.hidden = settings.style !== 'paper';
+    for (const button of themeButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.theme === settings.theme));
+      // Show each theme's real stock and accent rather than a fixed swatch.
+      const p = XGlow.palette({ ...settings, style: 'paper', theme: button.dataset.theme });
+      button.style.setProperty('--swatch', `rgb(${p.base})`);
+      button.style.setProperty('--theme-accent', `rgb(${p.accent})`);
+    }
     for (const button of styleButtons) {
       button.setAttribute('aria-pressed', String(button.dataset.style === settings.style));
     }
@@ -93,6 +104,7 @@
   }
   for (const button of swatches) button.addEventListener('click', () => save({ accent: button.dataset.accent }));
   for (const button of styleButtons) button.addEventListener('click', () => save({ style: button.dataset.style }));
+  for (const button of themeButtons) button.addEventListener('click', () => save({ theme: button.dataset.theme }));
   $('customColor').addEventListener('input', event => save({ accent: 'custom', customColor: event.target.value }));
   hexInput.addEventListener('change', saveHex);
   hexInput.addEventListener('keydown', event => {
