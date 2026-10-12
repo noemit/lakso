@@ -11,16 +11,11 @@
     saved: 'Saved on this device',
     saveFailed: 'Could not save. Please try again.',
     loadFailed: 'Could not load your preferences.',
-    invalidHex: 'Enter a HEX color, e.g. #22c55e.'
   };
 
   const status = $('status');
-  const hexInput = $('customHex');
-  const swatches = [...document.querySelectorAll('[data-accent]')];
-  const styleButtons = [...document.querySelectorAll('[data-style]')];
   const themeButtons = [...document.querySelectorAll('[data-theme]')];
   const themeFieldset = $('themeFieldset');
-  const accentFieldset = $('accentFieldset');
   const controls = [...document.querySelectorAll('input, button')];
   let settings = XGlow.normalize();
   let queue = Promise.resolve();
@@ -44,31 +39,17 @@
     // Width has no meaning while the sidebar is shown, so the slider follows
     // the sidebar toggle rather than sitting there doing nothing.
     $('feedWidth').disabled = settings.sidebar;
-    // Stripes need opaque stock to alternate between, so paper only.
-    $('zebra').disabled = settings.style !== 'paper';
-    $('customControls').hidden = settings.accent !== 'custom';
-    // The paper style is monochrome: the accent controls would do nothing,
-    // so they are hidden rather than left there lying to the user.
-    accentFieldset.hidden = settings.style === 'paper';
-    // Themes are the paper style's palette; glass keeps its own accent system.
-    themeFieldset.hidden = settings.style !== 'paper';
+    // Stripes need opaque stock to alternate between, so they are unavailable
+    // on the translucent materials.
+    const material = XGlow.themes[settings.theme]?.material;
+    $('zebra').disabled = material === 'glass' || material === 'dim';
     for (const button of themeButtons) {
       button.setAttribute('aria-pressed', String(button.dataset.theme === settings.theme));
-      // Show each theme's real stock and accent rather than a fixed swatch.
-      const p = XGlow.palette({ ...settings, style: 'paper', theme: button.dataset.theme });
+      // Show each theme's real stock and accent rather than a fixed swatch, so
+      // the choice reads before it is applied.
+      const p = XGlow.palette({ theme: button.dataset.theme, tint: settings.tint });
       button.style.setProperty('--swatch', `rgb(${p.base})`);
       button.style.setProperty('--theme-accent', `rgb(${p.accent})`);
-    }
-    for (const button of styleButtons) {
-      button.setAttribute('aria-pressed', String(button.dataset.style === settings.style));
-    }
-    $('customColor').value = settings.customColor;
-    hexInput.value = settings.customColor;
-    hexInput.removeAttribute('aria-invalid');
-    document.documentElement.style.setProperty('--accent', XGlow.palette(settings).interfaceHex);
-    for (const button of swatches) {
-      button.setAttribute('aria-pressed', String(button.dataset.accent === settings.accent));
-      button.style.setProperty('--swatch', XGlow.palette({ ...settings, accent: button.dataset.accent }).hex);
     }
   }
 
@@ -84,15 +65,6 @@
       .catch(() => { status.textContent = MESSAGES.saveFailed; });
   }
 
-  function saveHex() {
-    const color = XGlow.colorHex(hexInput.value);
-    if (color) {
-      save({ accent: 'custom', customColor: color });
-      return;
-    }
-    hexInput.setAttribute('aria-invalid', 'true');
-    status.textContent = MESSAGES.invalidHex;
-  }
 
   setDisabled(true);
 
@@ -102,16 +74,7 @@
       save({ [id]: type === 'checkbox' ? checked : Number(value) });
     });
   }
-  for (const button of swatches) button.addEventListener('click', () => save({ accent: button.dataset.accent }));
-  for (const button of styleButtons) button.addEventListener('click', () => save({ style: button.dataset.style }));
   for (const button of themeButtons) button.addEventListener('click', () => save({ theme: button.dataset.theme }));
-  $('customColor').addEventListener('input', event => save({ accent: 'custom', customColor: event.target.value }));
-  hexInput.addEventListener('change', saveHex);
-  hexInput.addEventListener('keydown', event => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    saveHex();
-  });
   $('reset').addEventListener('click', () => save(XGlow.defaults));
 
   const version = globalThis.chrome?.runtime?.getManifest?.().version;

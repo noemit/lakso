@@ -187,34 +187,6 @@ html[data-xlg] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > 
   box-shadow: inset 0 0 0 1px rgba(var(--xlg-ui-accent-rgb), .25);
 }
 
-/* Every Lakso surface is light stock, but X keeps painting its own theme ink
-   on the chrome around the cards (pale in dark mode). Anything sitting on a
-   themed surface therefore takes the paper ink, in one place, so a new
-   surface cannot be added without inheriting it. */
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-search-field], [data-xlg-panel]) {
-  color: rgb(var(--xlg-ui-accent-rgb)) !important;
-}
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-panel]) :is(a, button, span, div, label, input, textarea, [role="tab"], [role="link"], h1, h2) {
-  color: inherit !important;
-}
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-nav], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-search], [data-xlg-panel]) svg {
-  fill: currentColor !important;
-  color: inherit !important;
-}
-/* Placeholders are the one thing that must not inherit full-strength ink. */
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-composer], [data-xlg-search]) :is(input, textarea)::placeholder,
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-composer], [data-xlg-search]) [data-text="true"][aria-hidden="true"] {
-  color: rgba(var(--xlg-ui-accent-rgb), .55) !important;
-}
-/* The unselected timeline tabs are secondary. */
-html[data-xlg][data-xlg-style="paper"] [data-xlg-toolbar] [role="tab"]:not([aria-selected="true"]) {
-  color: rgba(var(--xlg-ui-accent-rgb), .62) !important;
-  font-weight: 500 !important;
-}
-/* The rail collapses to icons: the accent bar marks the active item. */
-html[data-xlg][data-xlg-style="paper"] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > div :is(span, div) {
-  font-weight: 600 !important;
-}
 
 /* Compact dock: the icon-only rail, detected by its measured width (also on
    Chat at wide viewports). Its native width is preserved; every control gets
@@ -302,17 +274,6 @@ html[data-xlg] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetB
   color: #111b33 !important;
 }
 
-/* Paper's primary button is a print-black pill (see settings.js), so the glass
-   style's hardcoded dark label has to flip to paper white. Without this the
-   label sits at ~1.1:1 against the pill. */
-html[data-xlg][data-xlg-style="paper"] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetButtonInline"], [data-testid="tweetButton"]) {
-  border: 1px solid rgba(255,255,255,.16) !important;
-  border-radius: 2px !important;
-  box-shadow: none !important;
-}
-html[data-xlg][data-xlg-style="paper"] :is([data-testid="SideNav_NewTweet_Button"], [data-testid="tweetButtonInline"], [data-testid="tweetButton"]) :is(div, span) {
-  color: #fcfcfb !important;
-}
 
 /* ---------------------------------------------------------- Column header */
 
@@ -386,12 +347,15 @@ html[data-xlg] [data-xlg-new-posts]:is(:hover, :focus-visible) {
 
 /* ------------------------------------------------------------- Post cards */
 
+/* Geometry comes from the theme (--xlg-radius, --xlg-card-padding,
+   --xlg-card-gap), so a theme changes the feed's rhythm, not only its hue.
+   The surface itself is per material, below. */
 html[data-xlg][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
   background: var(--xlg-surface) !important;
   border: 1px solid var(--xlg-border) !important;
-  border-radius: 22px !important;
-  margin: 6px 10px 10px !important;
-  padding: 18px 16px !important;
+  border-radius: var(--xlg-radius, 22px) !important;
+  margin: 6px var(--xlg-card-gap, 10px) var(--xlg-card-gap, 10px) !important;
+  padding: var(--xlg-card-padding, 18px 16px) !important;
   box-shadow: inset 0 1px 0 var(--xlg-glint), 0 6px 24px var(--xlg-shadow) !important;
   -webkit-backdrop-filter: blur(var(--xlg-blur)) saturate(135%) !important;
   backdrop-filter: blur(var(--xlg-blur)) saturate(135%) !important;
@@ -401,6 +365,75 @@ html[data-xlg][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColum
 }
 html[data-xlg][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)):hover {
   border-color: rgba(var(--xlg-ui-accent-rgb), .38) !important;
+}
+
+/* ----------------------------------------------------- Surface materials */
+
+/* Each theme picks a material. These are the design differences that make the
+   themes distinct rather than recolours: how a card is built, whether it is
+   translucent, and whether it reads through light, elevation, a rule or a
+   frame. Everything else in the file stays shared. */
+
+/* slab: opaque tight-rounded panels defined by elevation, no blur. */
+html[data-xlg][data-xlg-material="slab"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: rgb(var(--xlg-base)) !important;
+  border-color: transparent !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px var(--xlg-shadow), 0 8px 20px -12px var(--xlg-shadow) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* line: flat, square, separated by hairlines rather than elevation. The feed
+   becomes one continuous sheet, which is the point of this material. */
+html[data-xlg][data-xlg-material="line"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--xlg-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-xlg][data-xlg-material="line"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)):hover {
+  background: rgba(var(--xlg-ui-accent-rgb), .045) !important;
+  border-color: var(--xlg-border) !important;
+}
+
+/* solid: opaque, generous radius, lifted by a soft wide shadow. */
+html[data-xlg][data-xlg-material="solid"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: rgb(var(--xlg-base)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 28px -14px var(--xlg-shadow), 0 2px 6px -2px var(--xlg-shadow) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* frame: opaque with a heavy rule and a hard offset shadow. Deliberately
+   retro; the offset is what gives it its character. */
+html[data-xlg][data-xlg-material="frame"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: rgb(var(--xlg-base)) !important;
+  border: 2px solid rgb(var(--xlg-accent-rgb)) !important;
+  box-shadow: 5px 5px 0 0 rgb(var(--xlg-accent-rgb)) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-xlg][data-xlg-material="frame"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)):hover {
+  box-shadow: 2px 2px 0 0 rgb(var(--xlg-accent-rgb)) !important;
+  transform: translate(3px, 3px);
+}
+
+/* dim: dark translucent with almost no chrome, for long low-glare reading. */
+html[data-xlg][data-xlg-material="dim"] [data-testid="primaryColumn"] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
+  background: rgba(var(--xlg-base), .72) !important;
+  border-color: rgba(var(--xlg-border), .5) !important;
+  box-shadow: none !important;
+}
+
+/* The post body scales with the theme, so Soft breathes and Mono is dense. */
+html[data-xlg] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
+  font-size: var(--xlg-body-size, 15px) !important;
+  line-height: var(--xlg-leading, 1.5) !important;
 }
 /* Connected posts and every post on a post page stay flat: no card surface
    behind X's native reply connector. */
@@ -610,194 +643,14 @@ html[data-xlg][data-xlg-cards][data-xlg-lite]:not([data-xlg-thread]) [data-xlg-c
   background: linear-gradient(135deg, rgba(255,255,255,.07), transparent 48%), rgba(var(--xlg-base), .88);
 }
 
-/* ------------------------------------------------------------------- Paper */
 
-/* The paper style is XGlow's editorial alternative to the glass look: opaque
-   stock on a flat dark canvas, no blur, no glow, no accent hue. It only
-   overrides what the glass rules already set, so the two styles never fight
-   over unrelated properties. */
 
-/* Canvas: flat, never the tinted radial gradients. */
-html[data-xlg][data-xlg-style="paper"] {
-  --xlg-glow-opacity: 0;
-  --xlg-glow-secondary-opacity: 0;
-  --xlg-glow-tertiary-opacity: 0;
-  background-image: none !important;
-}
 
-/* Kills every glass surface in one place: same selectors as the glass rule
-   above, so the two stay in step if upstream adds a surface. */
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-toolbar], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
-html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before,
-html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
-  background: rgb(var(--xlg-base)) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  box-shadow: none !important;
-}
 
-/* Cards are cut stock, not glass: square corners and a hairline rule instead
-   of a rounded translucent plane. X already pads the article through its own
-   atomic classes, so this replaces that padding rather than adding to it:
-   stacking both produced insets that did not line up with X's avatar gutter. */
-html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)) {
-  border: 1px solid var(--xlg-border) !important;
-  border-radius: 2px !important;
-  margin: 0 0 14px !important;
-  padding: 22px 24px !important;
-}
-/* X's inner columns carry their own gutters; zero them so the single padding
-   above is the only inset, keeping avatar and text aligned at any width. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-xlg-cell-shell] {
-  padding: 0 !important;
-}
-/* The avatar sits as a fixed 44px column. At a wide feed its default margin
-   reads as a stray indent, so tighten it toward the card edge. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="Tweet-User-Avatar"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid^="UserAvatar-Container-"] {
-  margin-right: 0 !important;
-}
-/* Post body sits just below the author line rather than floating. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
-  margin-top: 6px;
-}
-/* The action row reads as a ruled footer, spanning the card like the
-   reference's hairline dividers. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] {
-  margin-top: 14px !important;
-  padding-top: 10px !important;
-  border-top: 1px solid var(--xlg-border) !important;
-}
-html[data-xlg][data-xlg-style="paper"][data-xlg-cards]:not([data-xlg-thread]) [data-testid="primaryColumn"] article:is([data-testid="tweet"], [data-testid="notification"]):not(:has(.r-m5arl1)):hover {
-  border-color: rgba(var(--xlg-ui-accent-rgb), .34) !important;
-}
 
-/* Alternating post backgrounds. The two shades are a matched pair derived
-   from the stock (see settings.js), so this reads as a rhythm rather than as
-   two different card styles. Only the surface changes: borders, padding and
-   the ruled footer stay identical, which is what keeps the spacing even. */
-html[data-xlg][data-xlg-style="paper"][data-xlg-zebra][data-xlg-cards]:not([data-xlg-thread]) [data-testid="cellInnerDiv"][data-xlg-zebra] article[data-testid="tweet"]:not(:has(.r-m5arl1)) {
-  background: rgb(var(--xlg-alt-stock)) !important;
-}
-/* The footer rule tracks the stripe so the hairline keeps its contrast on
-   both shades. */
-html[data-xlg][data-xlg-style="paper"][data-xlg-zebra] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] {
-  border-top-color: var(--xlg-border) !important;
-}
 
-/* The toolbar spans the feed column, not the viewport, so its tabs line up
-   with the cards below instead of overhanging them. */
-html[data-xlg][data-xlg-style="paper"] [data-xlg-toolbar] {
-  margin: 12px 0 14px !important;
-  padding-inline: 24px !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--xlg-border) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
 
-/* Panels, composer and search keep the stock but lose the pill radius. */
-html[data-xlg][data-xlg-style="paper"] :is([data-xlg-panel], [data-xlg-composer], [data-xlg-reply-notice], [data-xlg-search], [data-testid="Dropdown"]),
-html[data-xlg][data-xlg-style="paper"] [data-xlg-nav]::before {
-  border-radius: 2px !important;
-  inset: 12px 0 !important;
-}
 
-/* Editorial type: the reference sets large, tightly tracked headings against
-   small captions with generous leading, so post bodies get room to breathe. */
-/* X keeps painting its own theme ink (pale in dark mode) on these, which is
-   unreadable on cream stock. Lakso owns the post text colors inside cards
-   instead of relying on X's theme, and derives them from the paper ink. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="tweetText"], [data-testid="User-Name"], [data-testid="tweetText"] span, [data-testid="User-Name"] span, [data-testid="card.layoutLarge.media"], [data-testid="card.wrapper"]) {
-  color: rgb(var(--xlg-ui-accent-rgb)) !important;
-}
-/* Timestamps, handles and action counts are secondary: lighter, but still
-   mixed from the same ink so they never fall back to X's pale theme gray. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="User-Name"] > div:last-child, [role="group"] [data-testid="app-text-transition-container"], [role="group"] span, time, a[href$="/analytics"]) {
-  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
-}
-/* Inline links, mentions and hashtags keep a readable accent instead of X's
-   blue, which clashes with the warm palette. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] :is(a, [role="link"]) {
-  color: rgb(var(--xlg-accent-rgb)) !important;
-  text-decoration-color: rgba(var(--xlg-ui-accent-rgb), .35);
-}
-/* Icons and the action row follow the ink too, so they are not left pale. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] svg {
-  fill: rgba(var(--xlg-ui-accent-rgb), .72) !important;
-  color: rgba(var(--xlg-ui-accent-rgb), .72) !important;
-}
-/* X writes its theme color as an INLINE style on nearly every text wrapper,
-   and inline styles are exactly what a stylesheet cannot reach selectively.
-   Rather than chase each test id, cover the whole card: any element that
-   carries X's own inline color inherits the paper ink instead. Elements that
-   should keep a distinct color (the title, the verified badge, links) are
-   re-applied with higher specificity below. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [style*="color"] {
-  color: rgb(var(--xlg-ui-accent-rgb)) !important;
-}
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [style*="color"] * {
-  color: inherit !important;
-}
-/* Inline links and mentions keep the accent, not the body ink. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] [style*="color"] :is(a, [role="link"]) {
-  color: rgb(var(--xlg-accent-rgb)) !important;
-}
-/* Secondary lines: handles, timestamps, counts and context labels. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="User-Name"] > div:last-child [style*="color"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [role="group"] [style*="color"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) [style*="color"],
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) [style*="color"] * {
-  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
-}
-
-/* The reply and repost context lines above a post. X sets an inline color on
-   BOTH the link and a nested span, so coloring only the container leaves the
-   inner span at X's pale theme gray. Every layer is covered here. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]),
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] :is([data-testid="replyContext"], [data-testid="socialContext"]) * {
-  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
-}
-/* X also paints the inline color on a wrapper div just inside the article for
-   the "X reposted" row, which is outside the two test ids above. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] > div:first-child [style*="color"] {
-  color: rgba(var(--xlg-ui-accent-rgb), .68) !important;
-}
-
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] {
-  font-size: 16px !important;
-  line-height: 1.62 !important;
-  letter-spacing: .002em !important;
-  padding-block: 5px 2px;
-}
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="tweetText"] span {
-  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-}
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] [data-testid="User-Name"] {
-  letter-spacing: .012em !important;
-  line-height: 1.45 !important;
-}
-/* Rules instead of glass pills: the reference separates with hairlines. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([role="separator"], hr) {
-  background: var(--xlg-border) !important;
-  border-color: var(--xlg-border) !important;
-}
-/* Media and quoted posts sit flush, like the reference's full-bleed plates. */
-html[data-xlg][data-xlg-style="paper"] [data-testid="primaryColumn"] article[data-testid="tweet"] :is([data-testid="tweetPhoto"], [data-testid="card.wrapper"]) {
-  border-radius: 1px !important;
-  overflow: hidden !important;
-}
-/* Hover and current-page states lose their glow tints. */
-html[data-xlg][data-xlg-style="paper"] header nav :is(a, button):hover > div {
-  background: var(--xlg-hover) !important;
-  box-shadow: none !important;
-}
-html[data-xlg][data-xlg-style="paper"] header nav a:is([aria-current="page"], [data-xlg-nav-current]) > div {
-  background: rgba(var(--xlg-ui-accent-rgb), .1) !important;
-  box-shadow: inset 2px 0 0 rgb(var(--xlg-ui-accent-rgb)) !important;
-  border-radius: 2px !important;
-}
 /* Lightweight mode has nothing to reduce once blur is gone, so paper ignores it. */
 
 /* --------------------------------------------- Motion (every theme) */

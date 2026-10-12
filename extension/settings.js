@@ -6,9 +6,8 @@ globalThis.XGlow = (() => {
 
   const defaults = Object.freeze({
     enabled: true,
-    style: 'paper',
-    // Which colour theme; see `themes`. Independent of the glass/paper style.
-    theme: 'paper',
+    // The theme is the design: material, spacing, type, motion and palette.
+    theme: 'glass',
     accent: 'amber',
     customColor: '#97a7ff',
     tint: 50,
@@ -28,60 +27,105 @@ globalThis.XGlow = (() => {
 
   /* ------------------------------------------------------------- Themes */
 
-  /* Each theme is data, not code: a stock (card), a canvas (page behind the
-     cards), an ink, and an accent. palette() derives every other colour from
-     these, so a theme is one entry here plus a label in popup.html.
+  /* A theme is a complete design, not a recolour. Each one declares:
 
-     `motion` selects the animation character (see glass.css): 'rise' lifts
-     cards on hover, 'breathe' pulses the theme glow, 'sheen' sweeps a
-     highlight, 'press' is the quiet default. All of them respect
-     prefers-reduced-motion. */
+       surface   how a card is built: its material, radius and shadow model
+       spacing   the rhythm of the feed (card padding and the gap between them)
+       type      the typographic scale for post bodies
+       motion    the animation character, consumed by glass.css
+       palette   stock (card), canvas (page behind), ink, rule and accent
+
+     glass.css keys every structural rule off data-xlg-theme, so a theme can
+     restyle the feed without touching the others. Anything a theme does not
+     override falls back to the glass baseline, which stays as upstream wrote
+     it. Colours are derived by palette(), so a theme states intent rather than
+     a list of hex values.
+
+     `material` selects the surface treatment in glass.css:
+       glass  translucent, blurred, rounded, lit by an inner highlight
+       slab   opaque panels, tight radius, defined by elevation
+       line   flat, no radius, defined by hairlines
+       solid  opaque, generous radius, defined by a soft shadow
+       frame  opaque with a heavy border and a hard offset shadow
+       dim    dark translucent, low contrast, minimal chrome
+  */
   const themes = Object.freeze({
-    paper: Object.freeze({
-      label: 'Paper',
-      stock: [249, 244, 225], canvas: [176, 168, 150], ink: [42, 32, 27],
-      rule: [222, 207, 176], accent: [176, 106, 62], motion: 'press'
-    }),
-    cream: Object.freeze({
-      label: 'Cream',
-      stock: [253, 251, 246], canvas: [203, 199, 189], ink: [38, 35, 30],
-      rule: [226, 220, 207], accent: [196, 138, 74], motion: 'rise'
-    }),
-    blush: Object.freeze({
-      label: 'Blush',
-      stock: [255, 249, 244], canvas: [215, 196, 194], ink: [58, 38, 40],
-      rule: [238, 219, 213], accent: [214, 118, 106], motion: 'breathe'
-    }),
-    sage: Object.freeze({
-      label: 'Sage',
-      stock: [250, 250, 243], canvas: [196, 201, 182], ink: [44, 52, 38],
-      rule: [216, 222, 200], accent: [124, 148, 92], motion: 'rise'
-    }),
-    dusk: Object.freeze({
-      label: 'Dusk',
-      stock: [32, 33, 38], canvas: [67, 67, 69], ink: [232, 230, 236],
-      rule: [58, 59, 66], accent: [168, 152, 240], motion: 'breathe'
+    glass: Object.freeze({
+      label: 'Glass',
+      material: 'glass',
+      motion: 'rise',
+      radius: 22,
+      padding: [18, 16],
+      gap: 10,
+      leading: 1.5,
+      body: 15,
+      stock: [45, 40, 31], canvas: [19, 18, 17], ink: [233, 235, 238],
+      rule: [236, 228, 212], accent: [244, 185, 82]
     }),
     amber: Object.freeze({
       label: 'Amber',
-      stock: [43, 36, 28], canvas: [72, 69, 66], ink: [247, 236, 218],
-      rule: [72, 59, 45], accent: [254, 175, 72], motion: 'sheen'
+      material: 'glass',
+      motion: 'sheen',
+      radius: 20,
+      padding: [18, 16],
+      gap: 10,
+      leading: 1.5,
+      body: 15,
+      stock: [52, 40, 24], canvas: [22, 17, 12], ink: [247, 236, 218],
+      rule: [120, 92, 56], accent: [254, 175, 72]
+    }),
+    mono: Object.freeze({
+      label: 'Mono',
+      material: 'line',
+      motion: 'press',
+      radius: 0,
+      padding: [16, 18],
+      gap: 0,
+      leading: 1.45,
+      body: 14,
+      stock: [24, 25, 27], canvas: [43, 45, 49], ink: [226, 229, 233],
+      rule: [58, 61, 66], accent: [150, 200, 255]
+    }),
+    soft: Object.freeze({
+      label: 'Soft',
+      material: 'solid',
+      motion: 'rise',
+      radius: 26,
+      padding: [22, 22],
+      gap: 14,
+      leading: 1.62,
+      body: 16,
+      stock: [255, 253, 250], canvas: [219, 208, 197], ink: [56, 46, 42],
+      rule: [231, 220, 209], accent: [206, 128, 104]
+    }),
+    frame: Object.freeze({
+      label: 'Frame',
+      material: 'frame',
+      motion: 'press',
+      radius: 12,
+      padding: [20, 18],
+      gap: 16,
+      leading: 1.55,
+      body: 15,
+      stock: [255, 251, 240], canvas: [226, 214, 188], ink: [26, 24, 22],
+      rule: [26, 24, 22], accent: [222, 88, 60]
+    }),
+    dim: Object.freeze({
+      label: 'Dim',
+      material: 'dim',
+      motion: 'breathe',
+      radius: 16,
+      padding: [20, 18],
+      gap: 8,
+      leading: 1.58,
+      body: 15,
+      stock: [30, 33, 39], canvas: [18, 20, 24], ink: [205, 212, 222],
+      rule: [60, 67, 78], accent: [122, 162, 247]
     })
   });
 
   const themeNames = Object.freeze(Object.keys(themes));
 
-  const styles = Object.freeze(['paper', 'glass']);
-
-  const accents = Object.freeze({
-    aurora: '151, 167, 255',
-    ocean: '91, 204, 232',
-    forest: '72, 211, 151',
-    ruby: '244, 92, 108',
-    rose: '239, 157, 198',
-    amber: '244, 185, 82',
-    silver: '176, 193, 213'
-  });
 
   const WHITE = [255, 255, 255];
   const BLACK = [0, 0, 0];
@@ -106,9 +150,20 @@ globalThis.XGlow = (() => {
     if (!value || typeof value !== 'object') value = {};
     return {
       enabled: boolean(value.enabled, defaults.enabled),
-      style: styles.includes(value.style) ? value.style : defaults.style,
       theme: Object.hasOwn(themes, value.theme) ? value.theme : defaults.theme,
-      accent: value.accent === 'custom' || Object.hasOwn(accents, value.accent) ? value.accent : defaults.accent,
+      /* Retired: the theme system derives its own accent, so this is kept only
+         so an existing install's saved preferences normalise cleanly and the
+         key is not rewritten. It is still validated, because an unvalidated
+         string sitting in storage is one careless future `style.` assignment
+         away from being injectable CSS.
+
+         The typeof check is load-bearing: RegExp.test coerces its argument, so
+         `.test(undefined)` tests the string "undefined" -- nine lowercase
+         letters that match this pattern perfectly. Without it every missing
+         value validated as well-formed and came back out as undefined. */
+      accent: typeof value.accent === 'string' && /^[a-z]{3,12}$/.test(value.accent)
+        ? value.accent
+        : defaults.accent,
       customColor: colorHex(value.customColor) || defaults.customColor,
       tint: clamp(value.tint, 0, 100, defaults.tint),
       blur: clamp(value.blur, 0, 40, defaults.blur),
@@ -133,10 +188,6 @@ globalThis.XGlow = (() => {
   const toHex = channels => '#' + channels.map(channel => channel.toString(16).padStart(2, '0')).join('');
 
   const hexToRgb = hex => hex.slice(1).match(/../g).map(channel => parseInt(channel, 16));
-
-  const accentChannels = settings => settings.accent === 'custom'
-    ? settings.customColor.slice(1).match(/../g).map(channel => parseInt(channel, 16))
-    : accents[settings.accent].split(',').map(Number);
 
   /* Fades `rgb` towards `target` until `isReadable` holds. `isReadable`
      receives the candidate triplet, so callers can test real contrast rather
@@ -237,43 +288,28 @@ globalThis.XGlow = (() => {
       glowOpacity: String(tint * (dark ? .5 : .32)),
       glowSecondaryOpacity: String(tint * (dark ? .34 : .22)),
       glowTertiaryOpacity: String(tint * (dark ? .3 : .2)),
-      border: `rgba(${fade(rule)}, ${dark ? .55 : .8})`
+      border: `rgba(${fade(rule)}, ${dark ? .55 : .8})`,
+      /* Structural tokens: a theme restyles the feed's geometry, not just its
+         colour. glass.css reads these, so spacing and type belong to the theme
+         rather than being hardcoded per rule. */
+      material: theme.material,
+      radius: `${theme.radius}px`,
+      cardPadding: `${theme.padding[0]}px ${theme.padding[1]}px`,
+      cardGap: `${theme.gap}px`,
+      leading: String(theme.leading),
+      bodySize: `${theme.body}px`
     };
   }
 
-  /* Derives every themed color. The paper style is theme-driven: the chosen
-     theme supplies stock, canvas, ink and accent. The glass style keeps its
-     original behaviour, deriving from the accent and X's own tone, so the two
-     styles stay independent and a glass user's saved accent keeps working. */
+  /* Derives every themed value for the active theme. There is a single axis
+     now: `theme` is the design, so there is no separate style branch. The
+     glass baseline is simply the `glass` theme, and its palette is derived the
+     same way as the others so nothing can drift. */
   function palette(value, tone = 'dark') {
     const settings = normalize(value);
-    const light = tone === 'light';
-    if (settings.style === 'paper') return themePalette(settings, themes[settings.theme]);
-    const rgb = accentChannels(settings);
-    const strength = settings.tint / 100;
-    const base = mix(light ? WHITE : [18, 20, 24], rgb, strength * (light ? .08 : .24));
-    const background = mix(light ? [238, 242, 246] : [8, 10, 14], rgb, strength * (light ? .16 : .09));
-    // Primary buttons render dark text on the accent gradient.
-    const controlEnd = readableVariant(rgb, WHITE, candidate => luminance(candidate) >= .25);
-    // Accents used as text or outlines must contrast with the page.
-    const interfaceAccent = light ? readableVariant(rgb, BLACK, candidate => luminance(candidate) <= .3) : controlEnd;
-    return {
-      accent: rgb.join(', '),
-      hex: toHex(rgb),
-      interfaceAccent: interfaceAccent.join(', '),
-      interfaceHex: toHex(interfaceAccent),
-      controlEnd: controlEnd.join(', '),
-      controlStart: controlEnd.map(channel => Math.round(channel * .55 + 255 * .45)).join(', '),
-      base: base.join(', '),
-      background: `rgb(${background.join(', ')})`,
-      glowSecondary: mix(WHITE, rgb, .88).join(', '),
-      glowTertiary: mix(WHITE, rgb, .96).join(', '),
-      glowOpacity: String(strength * .4),
-      glowSecondaryOpacity: String(strength * .27),
-      glowTertiaryOpacity: String(strength * .24),
-      border: `rgba(${mix([235, 235, 235], rgb, .15).join(', ')}, ${light ? .72 : .16})`
-    };
+    void tone;
+    return themePalette(settings, themes[settings.theme]);
   }
 
-  return { storageKey, defaults, accents, styles, themes, themeNames, normalize, colorHex, palette, contrast, settingsAreDark };
+  return { storageKey, defaults, themes, themeNames, normalize, colorHex, palette, contrast, settingsAreDark };
 })();

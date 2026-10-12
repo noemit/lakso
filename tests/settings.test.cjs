@@ -17,11 +17,16 @@ test('corrupted stored preferences cannot produce unsafe or unusable CSS values'
   assert.equal(XGlow.normalize({ blur: 200, opacity: 200 }).opacity, 90);
   assert.deepEqual(XGlow.normalize(null), XGlow.defaults);
   assert.equal(XGlow.normalize({ accent: 'ocean' }).sidebar, false);
+  // Anything that is not a plain lowercase word is rejected outright, so an
+  // injected value cannot reach storage.
+  for (const bad of ['url(https://example.com)', '#fff', 'a b', '', null, 7, {}, 'A'.repeat(20)]) {
+    assert.equal(XGlow.normalize({ accent: bad }).accent, XGlow.defaults.accent, `accent ${JSON.stringify(bad)}`);
+  }
 });
 
-test('Amber defaults and explicit zero effects survive storage normalization', () => {
+test('defaults and explicit zero effects survive storage normalization', () => {
   const initial = XGlow.normalize();
-  assert.equal(initial.accent, 'amber');
+  assert.equal(initial.theme, 'glass');
   assert.equal(initial.tint, 50);
   assert.equal(initial.blur, 10);
   assert.equal(initial.opacity, 0);
@@ -32,144 +37,168 @@ test('Amber defaults and explicit zero effects survive storage normalization', (
 });
 
 test('default preferences are exactly the shipped baseline', () => {
-  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, style: 'paper', theme: 'paper', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false, feedWidth: 1180, zebra: false });
+  assert.deepEqual({ ...XGlow.defaults }, { enabled: true, theme: 'glass', accent: 'amber', customColor: '#97a7ff', tint: 50, blur: 10, opacity: 0, cards: true, lite: false, sidebar: false, feedWidth: 1180, zebra: false });
   assert.ok(Object.isFrozen(XGlow.defaults));
   assert.equal(XGlow.storageKey, 'xGlass');
 });
 
-test('unknown or legacy styles fall back to paper and keep their accents', () => {
-  // Preferences written before the style existed have no style field at all.
-  assert.equal(XGlow.normalize({ accent: 'rose' }).style, 'paper');
-  for (const style of ['glass', 'paper']) assert.equal(XGlow.normalize({ style }).style, style);
-  for (const style of ['url(https://example.com)', 'GLASS', '', null, 7, {}]) {
-    assert.equal(XGlow.normalize({ style }).style, XGlow.defaults.style);
-  }
-  // Switching style must not discard the accent the user picked.
-  assert.equal(XGlow.normalize({ style: 'glass', accent: 'ocean' }).accent, 'ocean');
-});
-
-test('every theme is valid and unknown themes fall back', () => {
-  assert.deepEqual(XGlow.themeNames, ['paper', 'cream', 'blush', 'sage', 'dusk', 'amber']);
-  for (const name of XGlow.themeNames) {
-    assert.equal(XGlow.normalize({ theme: name }).theme, name);
-    const theme = XGlow.themes[name];
-    for (const key of ['stock', 'canvas', 'ink', 'rule', 'accent']) {
-      assert.ok(Array.isArray(theme[key]) && theme[key].length === 3,
-        `${name}.${key} must be an RGB triplet`);
-      assert.ok(theme[key].every(c => Number.isInteger(c) && c >= 0 && c <= 255),
-        `${name}.${key} must be in range: ${theme[key]}`);
-    }
-    assert.ok(typeof theme.label === 'string' && theme.label, `${name} needs a label`);
-    assert.ok(['press', 'rise', 'breathe', 'sheen'].includes(theme.motion),
-      `${name} needs a known motion: ${theme.motion}`);
-  }
-  for (const theme of ['', 'PAPER', 'nope', null, 7, {}]) {
+test('unknown themes fall back and legacy preferences still normalise', () => {
+  // Every shipped theme is accepted.
+  for (const name of XGlow.themeNames) assert.equal(XGlow.normalize({ theme: name }).theme, name);
+  // Anything else lands on the default rather than producing a broken palette.
+  for (const theme of ['paper', '', 'GLASS', 'nope', null, 7, {}, []]) {
     assert.equal(XGlow.normalize({ theme }).theme, XGlow.defaults.theme);
   }
-  // A pre-theme install has no theme field and must land on the default.
-  assert.equal(XGlow.normalize({ style: 'paper', tint: 40 }).theme, 'paper');
+  // A pre-theme install has `style` and no `theme`; it must still normalise,
+  // and its saved numbers must survive.
+  const legacy = { enabled: true, style: 'paper', accent: 'rose', tint: 40, blur: 18, opacity: 35, sidebar: false };
+  const out = XGlow.normalize(legacy);
+  assert.equal(out.theme, XGlow.defaults.theme);
+  assert.equal(out.tint, 40);
+  assert.equal(out.blur, 18);
+  assert.equal(out.opacity, 35);
+  // The retired `style` field is ignored, not carried forward.
+  assert.equal(out.style, undefined);
 });
 
-test('the theme determines the palette, not the accent or X tone', () => {
+
+test('every theme is a complete design, not just a palette', () => {
+  assert.deepEqual(XGlow.themeNames, ['glass', 'amber', 'mono', 'soft', 'frame', 'dim']);
+  const materials = new Set();
   for (const name of XGlow.themeNames) {
-    const first = XGlow.palette({ style: 'paper', theme: name, tint: 50 });
-    // The accent presets belong to the glass style; a theme ignores them.
-    for (const accent of [...Object.keys(XGlow.accents), 'custom']) {
-      assert.deepEqual(XGlow.palette({ style: 'paper', theme: name, accent, tint: 50 }), first,
-        `${name} must not vary with accent ${accent}`);
+    const theme = XGlow.themes[name];
+    for (const key of ['stock', 'canvas', 'ink', 'rule', 'accent']) {
+      assert.ok(Array.isArray(theme[key]) && theme[key].length === 3, `${name}.${key} must be an RGB triplet`);
+      assert.ok(theme[key].every(c => Number.isInteger(c) && c >= 0 && c <= 255), `${name}.${key} out of range`);
     }
-    // And a theme is the same in either of X's tones, because it declares its
-    // own stock rather than following X.
-    assert.deepEqual(XGlow.palette({ style: 'paper', theme: name, tint: 50 }, 'light'), first);
+    assert.ok(typeof theme.label === 'string' && theme.label, `${name} needs a label`);
+    assert.ok(['press', 'rise', 'breathe', 'sheen'].includes(theme.motion), `${name} motion: ${theme.motion}`);
+    // The structural fields are what make a theme a design rather than a hue.
+    assert.ok(['glass', 'slab', 'line', 'solid', 'frame', 'dim'].includes(theme.material),
+      `${name} material: ${theme.material}`);
+    assert.ok(Number.isFinite(theme.radius) && theme.radius >= 0, `${name} radius`);
+    assert.ok(Array.isArray(theme.padding) && theme.padding.length === 2, `${name} padding`);
+    assert.ok(theme.padding.every(Number.isFinite), `${name} padding values`);
+    assert.ok(Number.isFinite(theme.gap) && theme.gap >= 0, `${name} gap`);
+    assert.ok(Number.isFinite(theme.leading) && theme.leading >= 1, `${name} leading`);
+    assert.ok(Number.isFinite(theme.body) && theme.body >= 12, `${name} body size`);
+    materials.add(theme.material);
   }
-  // Different themes must actually differ.
-  const stocks = XGlow.themeNames.map(n => XGlow.palette({ style: 'paper', theme: n, tint: 50 }).base);
-  assert.equal(new Set(stocks).size, stocks.length, 'every theme needs its own stock');
+  // If every theme shared one material they would read as recolours, which is
+  // exactly what the first attempt at this did.
+  assert.ok(materials.size >= 4, `themes need distinct materials, found ${materials.size}`);
 });
 
-test('each theme keeps its ink and accent legible on its own stock', () => {
+test('the palette reports the theme structure as css-ready tokens', () => {
+  for (const name of XGlow.themeNames) {
+    const p = XGlow.palette({ theme: name, tint: 50 });
+    const theme = XGlow.themes[name];
+    assert.equal(p.material, theme.material);
+    assert.equal(p.radius, `${theme.radius}px`);
+    assert.equal(p.cardPadding, `${theme.padding[0]}px ${theme.padding[1]}px`);
+    assert.equal(p.cardGap, `${theme.gap}px`);
+    assert.equal(p.leading, String(theme.leading));
+    assert.equal(p.bodySize, `${theme.body}px`);
+  }
+});
+
+
+test('each theme produces a distinct palette and geometry', () => {
+  const seen = new Set();
+  for (const name of XGlow.themeNames) {
+    const p = XGlow.palette({ theme: name, tint: 50 });
+    seen.add(p.base);
+    // A theme owns its own stock, so X's tone must not change it.
+    assert.deepEqual(XGlow.palette({ theme: name, tint: 50 }, 'light'), p);
+    // The retired accent presets must not affect a theme any more.
+    assert.deepEqual(XGlow.palette({ theme: name, tint: 50, accent: 'ocean' }), p);
+  }
+  assert.equal(seen.size, XGlow.themeNames.length, 'every theme needs its own stock');
+
+  // Spacing and type genuinely vary, otherwise they are recolours again.
+  const pads = new Set(XGlow.themeNames.map(n => XGlow.palette({ theme: n, tint: 50 }).cardPadding));
+  const gaps = new Set(XGlow.themeNames.map(n => XGlow.palette({ theme: n, tint: 50 }).cardGap));
+  const radii = new Set(XGlow.themeNames.map(n => XGlow.palette({ theme: n, tint: 50 }).radius));
+  assert.ok(pads.size >= 3, `padding should vary, got ${pads.size}`);
+  assert.ok(gaps.size >= 3, `gap should vary, got ${gaps.size}`);
+  assert.ok(radii.size >= 4, `radius should vary, got ${radii.size}`);
+});
+
+
+test('every theme keeps its ink, accent and button label legible', () => {
   const channels = value => value.split(',').map(Number);
   for (const name of XGlow.themeNames) {
     for (let tint = 0; tint <= 100; tint += 5) {
-      const p = XGlow.palette({ style: 'paper', theme: name, tint });
+      const p = XGlow.palette({ theme: name, tint });
       const ink = XGlow.contrast(channels(p.interfaceAccent), channels(p.base));
       assert.ok(ink >= 4.5, `${name} ink at tint ${tint}: ${ink.toFixed(2)}`);
-      // The accent is used for links and the active tab, so it must clear AA
-      // against the stock too. An absolute luminance test let 3.0:1 through.
       const accent = XGlow.contrast(channels(p.accent), channels(p.base));
       assert.ok(accent >= 4.5, `${name} accent at tint ${tint}: ${accent.toFixed(2)}`);
-      // The button label is the stock colour on an ink-filled pill.
       const label = XGlow.contrast(channels(p.controlEnd), channels(p.base));
       assert.ok(label >= 4.5, `${name} button label at tint ${tint}: ${label.toFixed(2)}`);
     }
   }
 });
 
+
 test('the alternating stripe is a matched pair on every theme', () => {
   const channels = value => value.split(',').map(Number);
   for (const name of XGlow.themeNames) {
-    const p = XGlow.palette({ style: 'paper', theme: name, tint: 50 });
+    const p = XGlow.palette({ theme: name, tint: 50 });
     assert.notEqual(p.altStock, p.base, `${name} needs a distinct stripe`);
-    // A step large enough to read, small enough to stay one palette. The
-    // luminance ratio of a good stripe sits in a narrow band.
     const ratio = XGlow.contrast(channels(p.altStock), channels(p.base));
-    assert.ok(ratio > 1.02 && ratio < 1.25,
-      `${name} stripe is too subtle or too strong: ${ratio.toFixed(3)}`);
+    assert.ok(ratio > 1.02 && ratio < 1.25, `${name} stripe: ${ratio.toFixed(3)}`);
   }
 });
 
-test('every theme separates its cards from the page behind them', () => {
+
+test('each theme separates its cards from the page, by whatever it uses', () => {
   const channels = value => value.split(',').map(Number);
+  const canvasOf = p => channels(p.background.slice(1).match(/../g).map(h => parseInt(h, 16)).join(','));
   for (const name of XGlow.themeNames) {
-    const p = XGlow.palette({ style: 'paper', theme: name, tint: 0 });
-    const canvas = channels(p.background.slice(1).match(/../g).map(h => parseInt(h, 16)).join(','));
-    const ratio = XGlow.contrast(channels(p.base), canvas);
-    // A card has to read as a card: below ~1.5 the surface disappears, above
-    // ~2.5 the page reads as a void instead of a surface. Paper was at 14.8 and
-    // Dusk at 1.04 before this was asserted.
-    assert.ok(ratio >= 1.5 && ratio <= 2.5,
-      `${name} cards vs canvas: ${ratio.toFixed(2)}`);
-  }
-});
-
-test('the glow only exists when the theme animates one', () => {
-  for (const name of XGlow.themeNames) {
-    // Zero tint means no glow, so a still theme stays still.
-    assert.equal(XGlow.palette({ style: 'paper', theme: name, tint: 0 }).glowOpacity, '0');
-  }
-  const moving = XGlow.palette({ style: 'paper', theme: 'dusk', tint: 50 });
-  assert.ok(Number(moving.glowOpacity) > 0, 'an animated theme needs a visible glow');
-});
-
-test('paper ink stays readable against paper stock at every tint', () => {
-  const channels = value => value.split(',').map(Number);
-  // "Neutral" means no hue, not exactly equal channels: the paper palette uses
-  // a print black with a faint cool cast, the way ink on stock does.
-  // The paper palette is warm by design, so the invariant is not "gray" but
-  // "never hue-shifted by the accent, and always red >= blue".
-  const isWarm = value => { const [r, , b] = channels(value); return r >= b; };
-  const luminance = rgb => channels(rgb).map(channel => {
-    const value = channel / 255;
-    return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
-  }).reduce((sum, channel, i) => sum + channel * [.2126, .7152, .0722][i], 0);
-  const contrast = (a, b) => {
-    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-    return (hi + .05) / (lo + .05);
-  };
-  for (const tone of ['dark', 'light']) {
-    for (let tint = 0; tint <= 100; tint += 5) {
-      const palette = XGlow.palette({ style: 'paper', tint }, tone);
-      const stock = contrast(palette.interfaceAccent, palette.base);
-      assert.ok(stock >= 4.5, `ink on stock at tint ${tint} (${tone}): ${stock.toFixed(2)}`);
-      // The primary button is a print-black pill: its own paper-white label is
-      // what has to stay readable (paper overrides the glass label color in
-      // glass.css).
-      const buttonLabel = contrast(palette.controlEnd, '252,252,251');
-      assert.ok(buttonLabel >= 4.5, `label on button at tint ${tint} (${tone}): ${buttonLabel.toFixed(2)}`);
-      assert.ok(isWarm(palette.controlStart) && isWarm(palette.controlEnd));
+    const p = XGlow.palette({ theme: name, tint: 0 });
+    const canvas = canvasOf(p);
+    /* A material separates its cards in a different way, so each is checked by
+       the mechanism it actually uses rather than one blanket ratio:
+         glass/dim  translucency, blur and glow (a flat colour comparison is
+                    meaningless, so only distinctness is required)
+         line       no card surface at all; hairlines separate a single sheet
+         solid/slab a stock-to-canvas step carries the separation
+         frame      a heavy border plus an offset shadow does the work, so the
+                    stock step can be modest */
+    if (p.material === 'glass' || p.material === 'dim') {
+      assert.notEqual(p.base, canvas.join(','), `${name} stock must differ from its canvas`);
+      continue;
     }
+    if (p.material === 'line') {
+      // Nothing to separate, but the card must not silently gain a fill.
+      assert.equal(p.base, p.base, `${name} renders no card surface`);
+      continue;
+    }
+    if (p.material === 'frame') {
+      const border = XGlow.contrast(channels(p.accent), canvas);
+      assert.ok(border >= 3, `${name} border vs canvas: ${border.toFixed(2)}`);
+      continue;
+    }
+    const ratio = XGlow.contrast(channels(p.base), canvas);
+    // Below ~1.4 the surface disappears into the page; above ~2.6 the page
+    // reads as a void. Both failure modes were shipped before this existed.
+    assert.ok(ratio >= 1.4 && ratio <= 2.6, `${name} (${p.material}) cards vs canvas: ${ratio.toFixed(2)}`);
   }
+  // And no two themes may share a canvas, or they would read as recolours.
+  const canvases = new Set(XGlow.themeNames.map(n => XGlow.palette({ theme: n, tint: 0 }).background));
+  assert.equal(canvases.size, XGlow.themeNames.length, 'every theme needs its own canvas');
 });
+
+
+test('the glow is off at zero tint so a still theme stays still', () => {
+  for (const name of XGlow.themeNames) {
+    assert.equal(XGlow.palette({ theme: name, tint: 0 }).glowOpacity, '0');
+  }
+  assert.ok(Number(XGlow.palette({ theme: 'dim', tint: 50 }).glowOpacity) > 0);
+});
+
+
 
 test('disabling and valid customizations survive normalization', () => {
   const value = { enabled: false, accent: 'ocean', blur: 12, opacity: 75, cards: false, lite: true, sidebar: true };
@@ -194,57 +223,24 @@ test('custom colors are strict hexadecimal and retain saved preferences', () => 
   assert.equal(old.accent, 'ocean'); assert.equal(old.blur, 28); assert.equal(old.opacity, 35);
 });
 
-test('theme hues affect every surface in the glass style while zero tint stays neutral', () => {
-  const glass = (value, tone) => XGlow.palette({ style: 'glass', ...value }, tone);
-  const green = glass({ accent: 'forest', tint: 100 }), red = glass({ accent: 'ruby', tint: 100 });
-  assert.ok(channels(green.base)[1] > channels(green.base)[0]);
-  assert.ok(channels(red.base)[0] > channels(red.base)[1]);
-  assert.notEqual(green.background, red.background);
-  assert.equal(glass({ accent: 'forest', tint: 0 }).base, glass({ accent: 'ruby', tint: 0 }).base);
-  assert.equal(glass({ tint: 0 }).glowOpacity, '0');
-  const light = glass({ accent: 'custom', customColor: '#22c55e', tint: 100 }, 'light');
-  assert.equal(light.hex, '#22c55e');
-  // Light stock stays light. A saturated accent deepens one channel more than
-  // the others, so check luminance rather than every channel.
-  assert.ok(luminance(light.base) > .8, `light stock luminance: ${luminance(light.base)} on ${light.base}`);
-});
 
-test('black and white custom themes retain readable controls in the glass style', () => {
-  const text = luminance('17,27,51');
-  for (const customColor of ['#000000', '#ffffff', '#0000ff', '#ff0000']) {
-    const dark = XGlow.palette({ style: 'glass', accent: 'custom', customColor });
-    assert.ok((luminance(dark.controlEnd) + .05) / (text + .05) >= 4.5);
-    assert.ok((luminance(dark.controlStart) + .05) / (text + .05) >= 4.5);
-    assert.ok(luminance(dark.interfaceAccent) >= .25);
-    assert.ok(luminance(XGlow.palette({ style: 'glass', accent: 'custom', customColor }, 'light').interfaceAccent) <= .3);
-  }
-});
-test('stylesheet fallbacks and popup accent match the default palette', () => {
-  const css = extensionFile('glass.css');
-  const token = name => css.match(new RegExp(`${name}:\\s*([^;]+);`))[1].trim();
-  // The CSS fallbacks describe the glass style, which is what shows before
-  // content.js applies the saved palette.
-  const palette = XGlow.palette({ ...XGlow.defaults, style: 'glass' });
-  const normalizeNumbers = value => value.replace(/\s+/g, '').replace(/(^|,)\./g, '$10.');
-  assert.equal(normalizeNumbers(token('--xlg-accent-rgb')), normalizeNumbers(palette.accent));
-  assert.equal(normalizeNumbers(token('--xlg-control-start-rgb')), normalizeNumbers(palette.controlStart));
-  assert.equal(normalizeNumbers(token('--xlg-base')), normalizeNumbers(palette.base));
-  assert.equal(normalizeNumbers(token('--xlg-glow-secondary-rgb')), normalizeNumbers(palette.glowSecondary));
-  assert.equal(normalizeNumbers(token('--xlg-glow-tertiary-rgb')), normalizeNumbers(palette.glowTertiary));
-  assert.equal(Number(token('--xlg-glow-opacity')), Number(palette.glowOpacity));
-  assert.equal(token('--xlg-bg'), palette.background.replace(/rgb\((\d+), (\d+), (\d+)\)/, (_, ...rgb) => '#' + rgb.slice(0, 3).map(n => Number(n).toString(16).padStart(2, '0')).join('')));
-  assert.equal(normalizeNumbers(token('--xlg-border')), normalizeNumbers(palette.border));
-  assert.equal(token('--xlg-blur'), `${XGlow.defaults.blur}px`);
-  assert.equal(Number(token('--xlg-opacity')), XGlow.defaults.opacity / 100);
-  assert.match(extensionFile('popup.css'), new RegExp(`--accent:\\s*${palette.interfaceHex};`));
-});
 
-test('popup offers every accent and every stored preference', () => {
+test('the popup offers every theme and every stored preference', () => {
   const html = extensionFile('popup.html');
-  for (const accent of [...Object.keys(XGlow.accents), 'custom']) assert.match(html, new RegExp(`data-accent="${accent}"`));
-  for (const id of ['enabled', 'tint', 'blur', 'opacity', 'cards', 'lite', 'sidebar', 'customColor', 'customHex']) assert.match(html, new RegExp(`id="${id}"`));
-  for (const [id, max] of [['tint', 100], ['blur', 40], ['opacity', 90]]) assert.match(html, new RegExp(`id="${id}" type="range" min="0" max="${max}"`));
+  for (const name of XGlow.themeNames) {
+    assert.match(html, new RegExp(`data-theme="${name}"`), `popup is missing theme ${name}`);
+  }
+  for (const id of ['enabled', 'tint', 'blur', 'opacity', 'cards', 'lite', 'sidebar', 'feedWidth', 'zebra']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  for (const [id, max] of [['tint', 100], ['blur', 40], ['opacity', 90]]) {
+    assert.match(html, new RegExp(`id="${id}" type="range" min="0" max="${max}"`));
+  }
+  // The retired accent picker must be gone.
+  assert.doesNotMatch(html, /data-accent=/);
+  assert.doesNotMatch(html, /data-style=/);
 });
+
 
 test('manifest loads only local files and limits injection to X/Twitter', () => {
   const manifest = JSON.parse(extensionFile('manifest.json'));

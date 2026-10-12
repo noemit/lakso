@@ -517,20 +517,23 @@
   function apply() {
     root.toggleAttribute('data-xlg', settings.enabled);
     root.setAttribute('data-xlg-tone', nativeTone);
-    root.setAttribute('data-xlg-style', settings.style);
     root.setAttribute('data-xlg-theme', settings.theme);
-    // The animation character belongs to the theme, and the motion layer only
-    // runs in the paper style, which is the one with opaque themed surfaces.
-    root.setAttribute(
-      'data-xlg-motion',
-      settings.style === 'paper' ? (XGlow.themes[settings.theme]?.motion || 'press') : 'press'
-    );
+    root.setAttribute('data-xlg-material', XGlow.themes[settings.theme]?.material || 'glass');
+    // The animation character belongs to the theme.
+    root.setAttribute('data-xlg-motion', XGlow.themes[settings.theme]?.motion || 'press');
     root.toggleAttribute('data-xlg-cards', settings.cards);
     root.toggleAttribute('data-xlg-lite', settings.lite);
     root.toggleAttribute('data-xlg-hide-sidebar', !settings.sidebar);
     root.toggleAttribute('data-xlg-zebra', settings.zebra);
     const palette = XGlow.palette(settings, nativeTone);
     for (const [property, key] of PALETTE_PROPERTIES) root.style.setProperty(property, palette[key]);
+    /* Structural tokens. A theme restyles the feed's geometry, so these are
+       published as lengths rather than baked into per-theme CSS blocks. */
+    root.style.setProperty('--xlg-radius', palette.radius);
+    root.style.setProperty('--xlg-card-padding', palette.cardPadding);
+    root.style.setProperty('--xlg-card-gap', palette.cardGap);
+    root.style.setProperty('--xlg-leading', palette.leading);
+    root.style.setProperty('--xlg-body-size', palette.bodySize);
     root.style.setProperty('--xlg-blur', `${settings.blur}px`);
     root.style.setProperty('--xlg-opacity', String(settings.opacity / 100));
     // The feed width is read by glass.css as a length, so publish it there
